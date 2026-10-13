@@ -1,22 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { formatUtc } from "@/lib/format";
-import type { HeaderReport } from "@/lib/headers/analyze";
+import { isClickable } from "@/lib/links/analyze";
 import { decodeEncodedWords } from "@/lib/mime/encoded-words";
 import { getHeader } from "@/lib/mime/headers";
 import FindingsPanel from "./FindingsPanel";
 import HeadersTab from "./HeadersTab";
+import LinksTab from "./LinksTab";
+import PreviewTab from "./PreviewTab";
 import RawTab from "./RawTab";
 import Tabs from "./Tabs";
 import { DATA, LABEL } from "./ui";
 
-type TabId = "headers" | "raw";
+type TabId = "headers" | "links" | "preview" | "raw";
 
-export default function ReportView({ email, report }: { email: ParsedEmail; report: HeaderReport }) {
+export default function ReportView({ email, report }: { email: ParsedEmail; report: EmailReport }) {
   const [tab, setTab] = useState<TabId>("headers");
-  const from = report.sender.from;
+  const headers = report.headers;
+  const from = headers.sender.from;
   const to = getHeader(email.headers, "to");
 
   return (
@@ -25,7 +29,7 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
         <div className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-12">
           <p className={LABEL}>Subject</p>
           <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
-            {report.subject || "(no subject)"}
+            {headers.subject || "(no subject)"}
           </h1>
           <dl className="mt-4 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-sm console:mt-2 console:grid-cols-[9ch_minmax(0,1fr)] console:gap-y-0 console:text-xs dossier:gap-y-0 dossier:border-t dossier:border-hairline dossier:*:border-b dossier:*:border-hairline dossier:*:py-1">
             <dt className={LABEL}>From</dt>
@@ -42,7 +46,7 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
             <dt className={LABEL}>To</dt>
             <dd className={`${DATA} break-all`}>{to ? decodeEncodedWords(to) : "—"}</dd>
             <dt className={LABEL}>Date</dt>
-            <dd className="tabular-nums">{report.date ? formatUtc(report.date) : "—"}</dd>
+            <dd className="tabular-nums">{headers.date ? formatUtc(headers.date) : "—"}</dd>
           </dl>
           {email.warnings.length > 0 && (
             <details className="mt-3 text-sm text-muted">
@@ -66,12 +70,17 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
         label="Report sections"
         tabs={[
           { id: "headers", label: "Headers" },
+          { id: "links", label: "Links", count: report.links.links.filter(isClickable).length },
+          { id: "preview", label: "Safe preview" },
           { id: "raw", label: "Raw source" },
         ]}
         active={tab}
         onChange={setTab}
       >
-        {tab === "headers" ? <HeadersTab report={report} headers={email.headers} /> : <RawTab raw={email.raw} />}
+        {tab === "headers" && <HeadersTab report={headers} headers={email.headers} />}
+        {tab === "links" && <LinksTab links={report.links.links} />}
+        {tab === "preview" && <PreviewTab email={email} />}
+        {tab === "raw" && <RawTab raw={email.raw} />}
       </Tabs>
     </main>
   );

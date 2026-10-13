@@ -32,6 +32,23 @@ const courierPrime = Courier_Prime({
   preload: false,
 });
 
+/**
+ * Defence in depth for the no-network promise: in the built site the browser
+ * itself refuses every connection, and the preview frame inherits this
+ * policy. Not applied to `next dev`, which needs eval and a websocket.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'none'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join("; ");
+
 export const metadata: Metadata = {
   title: "Perspicax — phishing email analyser",
   description:
@@ -48,6 +65,7 @@ export default function RootLayout({
     // The boot script may change data-theme before React hydrates.
     <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning className={`${fonts} h-full antialiased`}>
       <head>
+        {process.env.NODE_ENV === "production" && <meta httpEquiv="Content-Security-Policy" content={CSP} />}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col bg-paper font-ui text-ink">{children}</body>

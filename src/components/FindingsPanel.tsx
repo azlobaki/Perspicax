@@ -9,7 +9,7 @@ export default function FindingsPanel({ findings }: { findings: Finding[] }) {
         Findings · {findings.length}
       </h2>
       {findings.length === 0 ? (
-        <p className="text-muted">No finding in the headers.</p>
+        <p className="text-muted">No finding.</p>
       ) : (
         <ol className="border-t border-rule console:border-t-0 dossier:border-t-0">
           {findings.map((finding, i) => (

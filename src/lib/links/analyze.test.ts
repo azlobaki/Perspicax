@@ -52,7 +52,7 @@ test("catches the PayPal lookalike's tricks", () => {
     "url.shortener",
   ]);
   const lookalike = report.findings.find((f) => f.id === "url.lookalike");
-  assert.deepEqual(lookalike?.evidence, ["pаypal.com imitates paypal.com", "paypa1.com imitates paypal.com"]);
+  assert.deepEqual(lookalike?.evidence, ["pаypal.com (xn--pypal-4ve.com) imitates paypal.com", "paypa1.com imitates paypal.com"]);
   assert.equal(report.forms[0].hasPassword, true);
 });
 

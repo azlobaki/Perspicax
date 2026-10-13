@@ -118,6 +118,11 @@ const FLAG_RULES: FlagRule[] = [
 const unique = (items: string[]) => [...new Set(items)].slice(0, 10);
 const destination = (link: Link) => link.url.final ?? link.url.raw;
 
+/** `pаypal.com (xn--pypal-4ve.com)`: the ASCII form shows what the eye cannot. */
+function hostLabel(url: InspectedUrl): string {
+  return url.displayHost !== url.host ? `${url.displayHost} (${url.host})` : (url.host ?? url.raw);
+}
+
 function linkFindings(
   links: Link[],
   forms: HtmlForm[],
@@ -142,7 +147,7 @@ function linkFindings(
     if (hits.length === 0) continue;
     findings.push({
       id: `url.${rule.flag}`, category: "link", severity: rule.severity, title: rule.title, explanation: rule.explanation,
-      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? `${l.url.displayHost} imitates ${l.url.lookalikeOf}` : destination(l)))),
+      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? `${hostLabel(l.url)} imitates ${l.url.lookalikeOf}` : destination(l)))),
       weight: rule.weight,
     });
   }

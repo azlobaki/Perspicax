@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import EntryPanel from "@/components/EntryPanel";
 import Footer from "@/components/Footer";
+import { parseHtml } from "@/components/parseHtml";
 import ReportView from "@/components/ReportView";
 import TopBar, { type FileMeta } from "@/components/TopBar";
 import { useSettings } from "@/hooks/useSettings";
 import type { ParsedEmail } from "@/lib/email";
-import { analyzeHeaders, type HeaderReport } from "@/lib/headers/analyze";
+import { analyzeEmail, type EmailReport } from "@/lib/analyze";
 import { parseEmail, parseHeadersOnly } from "@/lib/mime/parse";
 
 /** Everything about the current email. It lives here, in memory, and nowhere else. */
-type Analysis = { id: number; email: ParsedEmail; report: HeaderReport; file: FileMeta };
+type Analysis = { id: number; email: ParsedEmail; report: EmailReport; file: FileMeta };
 
 export default function Home() {
   const { settings, setSettings, loaded } = useSettings();
@@ -25,7 +26,7 @@ export default function Home() {
       const start = performance.now();
       const email = parse();
       // Organisation domains arrive with the settings panel (milestone 4).
-      const report = analyzeHeaders(email, { orgDomains: [] });
+      const report = analyzeEmail(email, { orgDomains: [], parseHtml });
       const parseMs = Math.round(performance.now() - start);
       setAnalysis({ id: ++nextId.current, email, report, file: { name, size, parseMs } });
       setError(null);
