@@ -1,0 +1,2 @@
+# Fixtures are byte-exact test inputs: never touch their line endings.
+fixtures/** -text

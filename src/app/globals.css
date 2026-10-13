@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * Three themes over one DOM (docs/design §8). Components only use the tokens
+ * below and the `suisse:` / `console:` / `dossier:` variants. Tailwind's stock
+ * palette, radii and shadows are removed so nothing can quietly hard-code a
+ * look of its own.
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --font-*: initial;
+}
+
+@theme inline {
+  --color-paper: var(--px-paper);
+  --color-panel: var(--px-panel);
+  --color-ink: var(--px-ink);
+  --color-muted: var(--px-muted);
+  --color-rule: var(--px-rule);
+  --color-hairline: var(--px-hairline);
+  --color-signal: var(--px-signal);
+  --color-signal-fg: var(--px-signal-fg);
+  --color-on-signal: var(--px-on-signal);
+  --font-ui: var(--px-font-ui);
+  --font-data: var(--px-font-data);
+  --font-display: var(--px-font-display);
+}
+
+@custom-variant suisse (&:where([data-theme="suisse"], [data-theme="suisse"] *));
+@custom-variant console (&:where([data-theme="console"], [data-theme="console"] *));
+@custom-variant dossier (&:where([data-theme="dossier"], [data-theme="dossier"] *));
+
+/* Swiss / industrial — the default. */
+[data-theme="suisse"] {
+  color-scheme: light;
+  --px-paper: #fbfbf9;
+  --px-panel: #f0f0ec;
+  --px-ink: #111111;
+  --px-muted: #636363;
+  --px-rule: #111111;
+  --px-hairline: #d6d6d2;
+  /* The vivid orange fills marks; text in that colour takes a darker step to stay readable. */
+  --px-signal: #ff3d00;
+  --px-signal-fg: #c93100;
+  --px-on-signal: #ffffff;
+  --px-font-ui: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --px-font-data: var(--font-plex-mono), ui-monospace, monospace;
+  --px-font-display: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Forensic console. */
+[data-theme="console"] {
+  color-scheme: dark;
+  --px-paper: #0e0f0d;
+  --px-panel: #151613;
+  --px-ink: #d2cfc2;
+  --px-muted: #8a877a;
+  --px-rule: #3a3b35;
+  --px-hairline: #24251f;
+  --px-signal: #f2a900;
+  --px-signal-fg: #f2a900;
+  --px-on-signal: #000000;
+  --px-font-ui: var(--font-plex-mono), ui-monospace, monospace;
+  --px-font-data: var(--font-plex-mono), ui-monospace, monospace;
+  --px-font-display: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+/* Case file / printed report. */
+[data-theme="dossier"] {
+  color-scheme: light;
+  --px-paper: #f3efe5;
+  --px-panel: #e9e3d4;
+  --px-ink: #1f1c17;
+  --px-muted: #675f51;
+  --px-rule: #1f1c17;
+  --px-hairline: #cbc2ae;
+  --px-signal: #b3261e;
+  --px-signal-fg: #b3261e;
+  --px-on-signal: #ffffff;
+  --px-font-ui: var(--font-source-serif), Georgia, serif;
+  --px-font-data: var(--font-courier-prime), "Courier New", monospace;
+  --px-font-display: var(--font-source-serif), Georgia, serif;
+}
+
+::selection {
+  background-color: var(--px-signal);
+  color: var(--px-on-signal);
+}
+
+* {
+  scrollbar-color: var(--px-hairline) transparent;
+  scrollbar-width: thin;
+}
