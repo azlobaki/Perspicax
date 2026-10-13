@@ -185,8 +185,14 @@ try {
     const applied = await evaluate("document.documentElement.dataset.theme");
     if (applied !== theme) failures.push(`${theme}: <html> has data-theme=${applied}`);
     await screenshot(`${theme}-empty.png`);
+    await evaluate(`document.getElementById("open-settings").click()`);
+    await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+    await screenshot(`${theme}-settings.png`);
 
     for (const fixture of fixtures) {
+      // A fixture may run under settings of its own (organisation domains…).
+      await load(base);
+      await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme, ...fixture.settings }))})`);
       await load(base);
       const before = external.length;
       const { root } = await page("DOM.getDocument");
@@ -205,15 +211,18 @@ try {
           else setTimeout(poll, 50);
         })();
       })`);
-      for (const want of fixture.expect) {
-        if (!text.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
-      }
-      const name = `${theme}-${fixture.file.replace(/\W+/g, "-")}`;
+      const name = `${theme}-${fixture.file.replace(/\W+/g, "-")}${fixture.settings ? "-with-settings" : ""}`;
+      let seen = text;
       const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
       for (const id of tabs) {
         await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
         await evaluate("new Promise((ok) => setTimeout(ok, 300))");
         await screenshot(`${name}-${id.replace(/^tab-/, "")}.png`);
+        seen += ` ${await evaluate("document.body.innerText.toLowerCase()")}`;
+      }
+      // Expectations may sit on any tab: the attachments' names, say.
+      for (const want of fixture.expect) {
+        if (!seen.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
       }
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }

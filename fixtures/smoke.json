@@ -2,6 +2,7 @@
   {
     "file": "spoofed-invoice.eml",
     "expect": [
+      "Malicious indicators",
       "Link text shows another destination",
       "HTML smuggling",
       "DMARC failed for rhone-energie.fr",
@@ -12,12 +13,18 @@
     ]
   },
   {
+    "file": "spoofed-invoice.eml",
+    "settings": { "orgDomains": ["rhone-energie.fr"] },
+    "expect": ["Sender authentication failed for your own domain", "Malicious indicators"]
+  },
+  {
     "file": "clean-newsletter.eml",
-    "expect": ["Nos coups de cœur d'octobre", "No finding", "mx.google.com"]
+    "expect": ["Nos coups de cœur d'octobre", "No finding", "matches the body"]
   },
   {
     "file": "lookalike-paypal.eml",
     "expect": [
+      "Likely phishing",
       "Password form inside the email",
       "Lookalike domain",
       "pаypal.com (xn--pypal-4ve.com) imitates paypal.com",
@@ -26,14 +33,24 @@
   },
   {
     "file": "quishing-qr.eml",
-    "expect": ["QR code in an image", "login-micros0ft365.com.verify-mfa.top", "Display name invokes Microsoft"]
+    "expect": ["Likely phishing", "QR code in an image", "login-micros0ft365.com.verify-mfa.top", "Display name invokes Microsoft"]
   },
   {
     "file": "macro-docm.eml",
-    "expect": ["Office document with macros", "Office document loads a remote template", "cdn-office365.top"]
+    "expect": ["Malicious indicators", "Office document with macros", "Office document loads a remote template", "cdn-office365.top"]
   },
   {
     "file": "rtlo-archive.eml",
-    "expect": ["File name uses a direction override", "Archive hides a program", "Commande_4471.pdf.exe"]
+    "expect": ["Malicious indicators", "File name uses a direction override", "Archive hides a program", "Commande_4471.pdf.exe"]
+  },
+  {
+    "file": "docusign.msg",
+    "expect": [
+      "Suspicious",
+      "Domain disguised as a subdomain",
+      "Display name invokes DocuSign",
+      "Microsoft composite authentication failed",
+      "Contrat_4471.pdf"
+    ]
   }
 ]
