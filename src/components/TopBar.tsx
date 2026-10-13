@@ -12,11 +12,15 @@ export default function TopBar({
   theme,
   onTheme,
   onClose,
+  settingsOpen,
+  onSettings,
 }: {
   file: FileMeta | null;
   theme: Theme | null;
   onTheme: (theme: Theme) => void;
   onClose: () => void;
+  settingsOpen: boolean;
+  onSettings: () => void;
 }) {
   return (
     <header className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-rule px-4 py-2.5 sm:px-6 suisse:border-t-[6px] suisse:border-t-ink console:border-hairline console:bg-panel console:py-1.5 dossier:border-b-2">
@@ -43,6 +47,15 @@ export default function TopBar({
             New email
           </button>
         )}
+        <button
+          id="open-settings"
+          type="button"
+          aria-pressed={settingsOpen}
+          className={`${BUTTON} aria-pressed:bg-ink aria-pressed:text-paper`}
+          onClick={onSettings}
+        >
+          Settings
+        </button>
         <ThemeSwitch theme={theme} onChange={onTheme} />
       </div>
     </header>

@@ -66,7 +66,7 @@ export default function EntryPanel({
               Drop an email to analyse it.
             </h1>
             <p className="mt-3 max-w-prose text-muted">
-              A <span className={DATA}>.eml</span> file from any mail client, or the raw headers of a message. It is
+              A <span className={DATA}>.eml</span> or Outlook <span className={DATA}>.msg</span> file, or the raw headers of a message. It is
               read in this page and never leaves it.
             </p>
             <div className="mt-auto flex flex-wrap gap-3 pt-8">

@@ -7,7 +7,9 @@ import { formatUtc } from "@/lib/format";
 import { isClickable } from "@/lib/links/analyze";
 import { decodeEncodedWords } from "@/lib/mime/encoded-words";
 import { getHeader } from "@/lib/mime/headers";
+import type { PivotService } from "@/lib/pivots/pivots";
 import AttachmentsTab from "./AttachmentsTab";
+import ExportBar from "./ExportBar";
 import FindingsPanel from "./FindingsPanel";
 import HeadersTab from "./HeadersTab";
 import IocsTab from "./IocsTab";
@@ -16,10 +18,17 @@ import PreviewTab from "./PreviewTab";
 import RawTab from "./RawTab";
 import Tabs from "./Tabs";
 import { DATA, LABEL } from "./ui";
+import { VerdictBlock, VerdictStamp } from "./VerdictBlock";
 
 type TabId = "headers" | "links" | "attachments" | "iocs" | "preview" | "raw";
 
-export default function ReportView({ email, report }: { email: ParsedEmail; report: EmailReport }) {
+export default function ReportView({ email, report, file, defang, pivots }: {
+  email: ParsedEmail;
+  report: EmailReport;
+  file: { name: string; size: number };
+  defang: boolean;
+  pivots: PivotService[];
+}) {
   const [tab, setTab] = useState<TabId>("headers");
   const headers = report.headers;
   const from = headers.sender.from;
@@ -27,10 +36,12 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
 
   return (
     <main className="flex-1 px-4 pb-12 sm:px-6">
-      <div className="grid gap-x-8 gap-y-6 border-b-[3px] border-rule py-6 lg:grid-cols-12 console:border-b console:border-hairline console:py-3 dossier:border-b-0 dossier:py-8">
+      <div className="relative grid gap-x-8 gap-y-6 border-b-[3px] border-rule py-6 lg:grid-cols-12 console:border-b console:border-hairline console:py-3 dossier:border-b-0 dossier:py-8">
+        <VerdictStamp score={report.score} />
         <div className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-12">
-          <p className={LABEL}>Subject</p>
-          <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
+          <VerdictBlock score={report.score} />
+          <p className={`${LABEL} mt-6 console:mt-3 dossier:mt-0`}>Subject</p>
+          <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:pr-56 dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
             {headers.subject || "(no subject)"}
           </h1>
           <dl className="mt-4 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-sm console:mt-2 console:grid-cols-[9ch_minmax(0,1fr)] console:gap-y-0 console:text-xs dossier:gap-y-0 dossier:border-t dossier:border-hairline dossier:*:border-b dossier:*:border-hairline dossier:*:py-1">
@@ -62,6 +73,7 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
               </ul>
             </details>
           )}
+          <ExportBar email={email} report={report} file={file} defang={defang} />
         </div>
         <div className="lg:col-span-7 console:lg:col-span-12 dossier:lg:col-span-12">
           <FindingsPanel findings={report.findings} />
@@ -81,10 +93,10 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
         active={tab}
         onChange={setTab}
       >
-        {tab === "headers" && <HeadersTab report={headers} headers={email.headers} />}
+        {tab === "headers" && <HeadersTab report={headers} headers={email.headers} dkim={report.dkim} />}
         {tab === "links" && <LinksTab links={report.links.links} />}
         {tab === "attachments" && <AttachmentsTab attachments={report.attachments} />}
-        {tab === "iocs" && <IocsTab iocs={report.iocs} />}
+        {tab === "iocs" && <IocsTab iocs={report.iocs} pivots={pivots} defangDefault={defang} />}
         {tab === "preview" && <PreviewTab email={email} />}
         {tab === "raw" && <RawTab raw={email.raw} />}
       </Tabs>

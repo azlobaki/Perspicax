@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SMALL_BUTTON } from "./ui";
 
-export default function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+export default function CopyButton({ text, label = "Copy" }: { text: string | (() => string); label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -11,7 +11,7 @@ export default function CopyButton({ text, label = "Copy" }: { text: string; lab
       className={SMALL_BUTTON}
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(text);
+          await navigator.clipboard.writeText(typeof text === "function" ? text() : text);
           setCopied(true);
           setTimeout(() => setCopied(false), 1200);
         } catch {

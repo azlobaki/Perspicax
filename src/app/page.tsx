@@ -6,46 +6,65 @@ import EntryPanel from "@/components/EntryPanel";
 import Footer from "@/components/Footer";
 import { parseHtml } from "@/components/parseHtml";
 import ReportView from "@/components/ReportView";
+import SettingsPanel from "@/components/SettingsPanel";
 import TopBar, { type FileMeta } from "@/components/TopBar";
 import { useSettings } from "@/hooks/useSettings";
-import type { ParsedEmail } from "@/lib/email";
 import { analyzeEmail, type EmailReport } from "@/lib/analyze";
+import type { ParsedEmail } from "@/lib/email";
 import { parseEmail, parseHeadersOnly } from "@/lib/mime/parse";
+import { parseMsg } from "@/lib/msg/parse";
 
-/** Everything about the current email. It lives here, in memory, and nowhere else. */
-type Analysis = { id: number; email: ParsedEmail; report: EmailReport; file: FileMeta };
+/** The current email. It lives here, in memory, and nowhere else. */
+type Loaded = { id: number; email: ParsedEmail; file: FileMeta };
+
+// OLE compound files (.msg) start with this signature, whatever their name.
+const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 
 export default function Home() {
-  const { settings, setSettings, loaded } = useSettings();
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const { settings, setSettings, loaded: settingsLoaded } = useSettings();
+  const [current, setCurrent] = useState<Loaded | null>(null);
+  const [result, setResult] = useState<{ id: number; report: EmailReport } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const nextId = useRef(0);
+  const orgDomains = settings.orgDomains.join("\n");
 
-  const analyse = useCallback(async (parse: () => ParsedEmail, name: string, size: number) => {
+  const load = useCallback((parse: () => ParsedEmail, name: string, size: number) => {
     try {
       const start = performance.now();
       const email = parse();
-      // Organisation domains arrive with the settings panel (milestone 4).
-      const report = await analyzeEmail(email, { orgDomains: [], parseHtml, decodeImage });
-      const parseMs = Math.round(performance.now() - start);
-      setAnalysis({ id: ++nextId.current, email, report, file: { name, size, parseMs } });
+      setCurrent({ id: ++nextId.current, email, file: { name, size, parseMs: Math.round(performance.now() - start) } });
       setError(null);
+      setShowSettings(false);
     } catch (err) {
       setError(`Could not read this email: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, []);
 
+  // Analyses the email in memory, and again whenever the organisation's domains change.
+  useEffect(() => {
+    if (!current || !settingsLoaded) return;
+    let cancelled = false;
+    analyzeEmail(current.email, { orgDomains: orgDomains ? orgDomains.split("\n") : [], parseHtml, decodeImage })
+      .then((report) => {
+        if (!cancelled) setResult({ id: current.id, report });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(`Analysis failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [current, orgDomains, settingsLoaded]);
+
   const openFile = useCallback(
     async (file: File) => {
-      if (/\.msg$/i.test(file.name)) {
-        setError("Outlook .msg files are not supported yet. Save the message as .eml, or paste its headers.");
-        return;
-      }
       const bytes = new Uint8Array(await file.arrayBuffer());
-      await analyse(() => parseEmail(bytes), file.name, bytes.length);
+      const isMsg = /\.msg$/i.test(file.name) || OLE_SIGNATURE.every((byte, i) => bytes[i] === byte);
+      load(() => (isMsg ? parseMsg(bytes) : parseEmail(bytes)), file.name, bytes.length);
     },
-    [analyse],
+    [load],
   );
 
   // A file dropped anywhere on the page is opened, replacing the current one.
@@ -80,24 +99,55 @@ export default function Home() {
     };
   }, [openFile]);
 
+  const report = current && result?.id === current.id ? result.report : null;
+
+  let main: React.ReactNode;
+  if (showSettings) {
+    main = <SettingsPanel settings={settings} onChange={setSettings} onClose={() => setShowSettings(false)} />;
+  } else if (current && report) {
+    main = (
+      <ReportView
+        key={current.id}
+        email={current.email}
+        report={report}
+        file={current.file}
+        defang={settings.defang}
+        pivots={settings.pivots}
+      />
+    );
+  } else if (current) {
+    main = (
+      <main className="flex-1 px-4 py-8 sm:px-6">
+        <p role={error ? "alert" : "status"} className={error ? "font-semibold text-signal-fg" : "text-muted"}>
+          {error ?? "Analysing…"}
+        </p>
+      </main>
+    );
+  } else {
+    main = (
+      <EntryPanel
+        dragging={dragging}
+        error={error}
+        onFile={(file) => void openFile(file)}
+        onHeaders={(text) => load(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
+      />
+    );
+  }
+
   return (
     <>
       <TopBar
-        file={analysis?.file ?? null}
-        theme={loaded ? settings.theme : null}
-        onTheme={(theme) => setSettings((current) => ({ ...current, theme }))}
-        onClose={() => setAnalysis(null)}
+        file={current?.file ?? null}
+        theme={settingsLoaded ? settings.theme : null}
+        onTheme={(theme) => setSettings((s) => ({ ...s, theme }))}
+        onClose={() => {
+          setCurrent(null);
+          setResult(null);
+        }}
+        settingsOpen={showSettings}
+        onSettings={() => setShowSettings((open) => !open)}
       />
-      {analysis ? (
-        <ReportView key={analysis.id} email={analysis.email} report={analysis.report} />
-      ) : (
-        <EntryPanel
-          dragging={dragging}
-          error={error}
-          onFile={(file) => void openFile(file)}
-          onHeaders={(text) => void analyse(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
-        />
-      )}
+      {main}
       <Footer />
     </>
   );

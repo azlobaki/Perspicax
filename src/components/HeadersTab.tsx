@@ -1,3 +1,4 @@
+import type { DkimCheck } from "@/lib/dkim/bodyhash";
 import type { HeaderField } from "@/lib/email";
 import { formatDelay, formatTime } from "@/lib/format";
 import type { HeaderReport } from "@/lib/headers/analyze";
@@ -25,10 +26,10 @@ const VERDICT_LABEL: Record<NonNullable<VendorVerdict["verdict"]>, string> = {
   clean: "Clean",
 };
 
-export default function HeadersTab({ report, headers }: { report: HeaderReport; headers: HeaderField[] }) {
+export default function HeadersTab({ report, headers, dkim }: { report: HeaderReport; headers: HeaderField[]; dkim: DkimCheck[] }) {
   return (
     <div className="grid gap-x-8 gap-y-8 lg:grid-cols-12 console:gap-y-4 dossier:gap-y-6 dossier:lg:grid-cols-2">
-      <Authentication auth={report.auth} />
+      <Authentication auth={report.auth} dkim={dkim} />
       <Sender sender={report.sender} />
       <Route hops={report.hops} />
       <Vendors vendors={report.vendors} />
@@ -37,7 +38,7 @@ export default function HeadersTab({ report, headers }: { report: HeaderReport; 
   );
 }
 
-function Authentication({ auth }: { auth: AuthSummary }) {
+function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }) {
   return (
     <section
       aria-labelledby="auth-title"
@@ -79,6 +80,22 @@ function Authentication({ auth }: { auth: AuthSummary }) {
             </div>
           ))}
         </dl>
+      )}
+      {dkim.length > 0 && (
+        <ul className="mt-3 grid gap-0.5 text-sm console:text-xs">
+          {dkim.map((check, i) => (
+            <li key={i}>
+              <span className={LABEL}>DKIM body hash</span>{" "}
+              <span className={DATA}>
+                d={check.signature.domain} s={check.signature.selector}
+              </span>{" "}
+              —{" "}
+              <span className={check.result === "mismatch" ? FLAG : "text-muted"}>
+                {check.result === "match" ? "matches the body" : check.result === "mismatch" ? "body changed after signing" : "algorithm not supported"}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
