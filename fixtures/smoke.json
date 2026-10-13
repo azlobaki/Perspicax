@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "file": "spoofed-invoice.eml",
+    "expect": [
+      "DMARC failed for rhone-energie.fr",
+      "Replies go to a different domain",
+      "Microsoft 365 classified it as phishing",
+      "Sending server misnames itself",
+      "mx01.mta-relay.click",
+      "CAT: PHSH"
+    ]
+  },
+  {
+    "file": "clean-newsletter.eml",
+    "expect": ["Nos coups de cœur d'octobre", "No finding in the headers", "mx.google.com"]
+  }
+]

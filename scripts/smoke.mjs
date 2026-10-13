@@ -44,7 +44,7 @@ async function launch() {
   const profile = mkdtempSync(join(tmpdir(), "perspicax-smoke-"));
   const proc = spawn(
     process.env.CHROME ?? "chromium",
-    ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+    ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
       `--user-data-dir=${profile}`, "--remote-debugging-port=0", "about:blank"],
     { stdio: ["ignore", "ignore", "pipe"] },
   );
@@ -126,7 +126,9 @@ try {
   cdp.on((msg) => {
     if (msg.method !== "Network.requestWillBeSent" || msg.sessionId !== sessionId) return;
     const url = msg.params.request.url;
-    if (!url.startsWith(base) && !url.startsWith("data:") && !url.startsWith("blob:")) external.push(url);
+    // Only network schemes count: browser-internal ones (chrome-extension:,
+    // data:, blob:) never leave the machine.
+    if (/^(https?|wss?):/.test(url) && !url.startsWith(base)) external.push(url);
   });
 
   const load = async (url) => {
