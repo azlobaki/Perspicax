@@ -29,6 +29,8 @@ const TYPES = {
 function serve() {
   const server = createServer((req, res) => {
     let path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    // A page of the app's origin that runs nothing, for writing settings.
+    if (path === "/smoke-blank") return res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html><title>blank</title><link rel="icon" href="data:,">`);
     if (path.endsWith("/")) path += "index.html";
     let file = join(OUT, path);
     if (!file.startsWith(OUT)) return res.writeHead(403).end();
@@ -177,11 +179,18 @@ try {
     writeFileSync(join(SHOTS, name), Buffer.from(data, "base64"));
   };
 
+  // Settings are written from a page of the same origin where the app does not
+  // run: the app rewrites its normalised settings once hydrated, and on its own
+  // page that write could land after ours and undo it.
+  const loadWithSettings = async (settings) => {
+    await load(`${base}smoke-blank`);
+    await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify(settings))})`);
+    await load(base);
+  };
+
   mkdirSync(SHOTS, { recursive: true });
   for (const theme of THEMES) {
-    await load(base);
-    await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme }))})`);
-    await load(base);
+    await loadWithSettings({ theme });
     const applied = await evaluate("document.documentElement.dataset.theme");
     if (applied !== theme) failures.push(`${theme}: <html> has data-theme=${applied}`);
     await screenshot(`${theme}-empty.png`);
@@ -191,9 +200,7 @@ try {
 
     for (const fixture of fixtures) {
       // A fixture may run under settings of its own (organisation domains…).
-      await load(base);
-      await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme, ...fixture.settings }))})`);
-      await load(base);
+      await loadWithSettings({ theme, ...fixture.settings });
       const before = external.length;
       const { root } = await page("DOM.getDocument");
       const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
@@ -232,9 +239,7 @@ try {
   // the content, hiding the very overflow this pass looks for.
   await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   for (const theme of THEMES) {
-    await load(base);
-    await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme }))})`);
-    await load(base);
+    await loadWithSettings({ theme });
     const { root } = await page("DOM.getDocument");
     const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
     await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
