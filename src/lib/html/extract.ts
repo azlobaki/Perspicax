@@ -175,13 +175,17 @@ export function extractHtml(doc: Document): HtmlExtract {
   for (const url of cssUrls(sheets)) add("css", url, null);
 
   // Only text a reader can actually see is checked for invisible tricks.
+  // Adjacent text nodes of one element are joined as is (a parser may split
+  // text at entities); text from different elements is kept apart.
   let visible = "";
+  let previous: Element | null = null;
   const root = doc.body ?? doc.documentElement;
   const walker = doc.createTreeWalker(root, SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const parent = node.parentElement;
     if (!parent || SKIP_TEXT.has(parent.tagName.toLowerCase()) || hiddenOf(parent)) continue;
-    visible += `${node.textContent ?? ""} `;
+    visible += `${parent === previous ? "" : " "}${node.textContent ?? ""}`;
+    previous = parent;
   }
 
   return {

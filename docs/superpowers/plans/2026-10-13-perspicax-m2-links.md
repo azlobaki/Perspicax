@@ -1206,6 +1206,10 @@ test("finds words broken by invisible characters and direction overrides in visi
   assert.deepEqual(result.brokenWords, ["Vé·rifiez", "com·pte"]);
   assert.equal(result.bidiOverrides, 1);
 });
+
+test("joins text a parser split at entities before looking for broken words", () => {
+  assert.deepEqual(extract(`<p>V&#233;&#8203;rifiez votre com&#8203;pte</p><p>a</p><p>b</p>`).brokenWords, ["Vé·rifiez", "com·pte"]);
+});
 ```
 
 - [ ] **Step 3: Run it to verify it fails**
@@ -1393,13 +1397,17 @@ export function extractHtml(doc: Document): HtmlExtract {
   for (const url of cssUrls(sheets)) add("css", url, null);
 
   // Only text a reader can actually see is checked for invisible tricks.
+  // Adjacent text nodes of one element are joined as is (a parser may split
+  // text at entities); text from different elements is kept apart.
   let visible = "";
+  let previous: Element | null = null;
   const root = doc.body ?? doc.documentElement;
   const walker = doc.createTreeWalker(root, SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const parent = node.parentElement;
     if (!parent || SKIP_TEXT.has(parent.tagName.toLowerCase()) || hiddenOf(parent)) continue;
-    visible += `${node.textContent ?? ""} `;
+    visible += `${parent === previous ? "" : " "}${node.textContent ?? ""}`;
+    previous = parent;
   }
 
   return {
