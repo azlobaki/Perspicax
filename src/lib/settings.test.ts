@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 // Explicit extensions: `node --test` runs these files directly, with no
 // bundler to resolve them.
+import { DEFAULT_PIVOTS } from "./pivots/pivots.ts";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
   THEME_BOOT_SCRIPT,
+  isValidTemplate,
+  normaliseDomain,
   parseSettings,
 } from "./settings.ts";
 
@@ -46,4 +49,45 @@ test("boot script ignores unknown, broken or missing values", () => {
   assert.equal(runBootScript(JSON.stringify({ theme: "neon" })), undefined);
   assert.equal(runBootScript("{not json"), undefined);
   assert.equal(runBootScript(null), undefined);
+});
+
+test("normalises organisation domains however they are typed", () => {
+  assert.equal(normaliseDomain(" Rhone-Energie.FR "), "rhone-energie.fr");
+  assert.equal(normaliseDomain("https://www.example.com/path?x=1"), "www.example.com");
+  assert.equal(normaliseDomain("user@example.org"), "example.org");
+  assert.equal(normaliseDomain("*.example.net"), "example.net");
+  assert.equal(normaliseDomain("münchen.de"), "xn--mnchen-3ya.de");
+  for (const bad of ["not a domain", "localhost", "1.2.3.4", "", "exa mple.com"]) assert.equal(normaliseDomain(bad), null, bad);
+});
+
+test("keeps valid settings and drops the rest", () => {
+  const settings = parseSettings({
+    theme: "console",
+    orgDomains: ["Rhone-Energie.fr", "rhone-energie.fr", "nope", 42],
+    defang: false,
+    pivots: [
+      { id: "a", name: "Mine", types: ["domain", "bogus"], template: "https://lookup.example/?q={value}" },
+      { id: "b", name: "Broken", types: ["ip"], template: "javascript:alert(1)" },
+      { id: "c", name: "", types: ["ip"], template: "https://x.example/{raw}" },
+    ],
+  });
+  assert.deepEqual(settings, {
+    theme: "console",
+    orgDomains: ["rhone-energie.fr"],
+    defang: false,
+    pivots: [{ id: "a", name: "Mine", types: ["domain"], template: "https://lookup.example/?q={value}" }],
+  });
+});
+
+test("defaults: defanged, built-in pivots; an emptied pivot list stays empty", () => {
+  assert.equal(parseSettings({}).defang, true);
+  assert.equal(parseSettings({}).pivots, DEFAULT_PIVOTS);
+  assert.deepEqual(parseSettings({ pivots: [] }).pivots, []);
+  assert.equal(parseSettings({ pivots: "garbage" }).pivots, DEFAULT_PIVOTS);
+});
+
+test("accepts only http(s) templates with a placeholder", () => {
+  assert.ok(isValidTemplate("https://x.example/{base64url}"));
+  assert.ok(!isValidTemplate("https://x.example/static"));
+  assert.ok(!isValidTemplate("ftp://x.example/{value}"));
 });

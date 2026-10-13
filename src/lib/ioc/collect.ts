@@ -7,16 +7,10 @@ import { parseAddressList } from "../mime/address.ts";
 import { getHeaders } from "../mime/headers.ts";
 import { normaliseHost } from "../net/domain.ts";
 import { ipScope, isIp } from "../net/ip.ts";
+import { IOC_TYPES, type Ioc, type IocType } from "./types.ts";
 
-export const IOC_TYPES = ["url", "domain", "ip", "email", "sha256", "sha1", "md5"] as const;
-export type IocType = (typeof IOC_TYPES)[number];
-
-export type Ioc = {
-  type: IocType;
-  value: string;
-  /** Where it was seen: "From", "link in HTML body", "attachment x.pdf"… */
-  sources: string[];
-};
+export { IOC_TYPES };
+export type { Ioc, IocType };
 
 const ORIGIN_NOUN: Record<LinkOrigin, string> = {
   a: "link", area: "link", form: "form", "meta-refresh": "redirect", text: "link", img: "image", css: "image",

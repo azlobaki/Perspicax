@@ -1,4 +1,4 @@
-import type { IocType } from "./collect.ts";
+import type { IocType } from "./types.ts";
 
 /**
  * The form tickets and chat tools will not turn into live links:

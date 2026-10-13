@@ -1,4 +1,4 @@
-import type { Ioc, IocType } from "../ioc/collect.ts";
+import type { Ioc, IocType } from "../ioc/types.ts";
 import { bytesToBinary } from "../mime/bytes.ts";
 
 /**
