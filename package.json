@@ -12,6 +12,7 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
+    "cfb": "^1.2.2",
     "fflate": "^0.8.3",
     "next": "16.3.4",
     "react": "19.2.8",
