@@ -220,9 +220,12 @@ try {
   }
 } finally {
   cdp.close();
+  // Chromium keeps writing its profile until it has exited.
+  const exited = new Promise((ok) => proc.once("exit", ok));
   proc.kill();
+  await exited;
   server.close();
-  rmSync(profile, { recursive: true, force: true });
+  rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 
 if (external.length > 0) console.error(`External requests:\n  ${[...new Set(external)].join("\n  ")}`);
