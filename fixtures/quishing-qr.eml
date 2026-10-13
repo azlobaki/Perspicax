@@ -1,0 +1,62 @@
+Received: from mail.m365-notification.top (mail.m365-notification.top [91.208.197.42])
+        by mx.google.com with ESMTPS id 3f2a1b0c9d8e
+        for <claire.dupont@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 13 Oct 2026 06:12:30 -0700 (PDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@m365-notification.top header.s=s1;
+       spf=pass (google.com: domain of securite@m365-notification.top designates 91.208.197.42 as permitted sender) smtp.mailfrom=securite@m365-notification.top;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=m365-notification.top
+Return-Path: <securite@m365-notification.top>
+From: Microsoft 365 <securite@m365-notification.top>
+To: claire.dupont@gmail.com
+Subject: =?UTF-8?Q?R=C3=A9activez_l=27authentification_multifacteur?=
+Date: Tue, 13 Oct 2026 13:12:29 +0000
+Message-ID: <mfa.4471@m365-notification.top>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="rel_4471"
+
+--rel_4471
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html><body>
+<p>Votre authentification multifacteur expire aujourd'hui.</p>
+<p>Scannez ce code avec votre t=C3=A9l=C3=A9phone pour la r=C3=A9activer&nbsp;:</p>
+<p><img src=3D"cid:qr4471@m365" width=3D"148" height=3D"148" alt=3D"QR"></p>
+</body></html>
+--rel_4471
+Content-Type: image/png; name="mfa.png"
+Content-Disposition: inline; filename="mfa.png"
+Content-ID: <qr4471@m365>
+Content-Transfer-Encoding: base64
+
+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
+A2s9A1JzAaoqAAAAAElFTkSuQmCC
+--rel_4471--
