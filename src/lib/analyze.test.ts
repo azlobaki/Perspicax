@@ -3,40 +3,53 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { analyzeEmail } from "./analyze.ts";
 import { parseEmail, parseHeadersOnly } from "./mime/parse.ts";
+import { parseMsg } from "./msg/parse.ts";
 import { parseTestHtml as parseHtml } from "./testing/dom.ts";
 import { decodePng } from "./testing/png.ts";
 
 const read = (name: string) => readFileSync(new URL(`../../fixtures/${name}`, import.meta.url));
 const decodeImage = async (data: Uint8Array) => decodePng(data);
-const ids = async (name: string, orgDomains: string[] = []) =>
-  (await analyzeEmail(parseEmail(read(name)), { orgDomains, parseHtml, decodeImage })).findings.map((f) => f.id);
+const analyse = (name: string, orgDomains: string[] = []) =>
+  analyzeEmail(name.endsWith(".msg") ? parseMsg(read(name)) : parseEmail(read(name)), { orgDomains, parseHtml, decodeImage });
+const summary = async (name: string) => {
+  const report = await analyse(name);
+  return { ids: report.findings.map((f) => f.id), score: report.score.score, band: report.score.band };
+};
 
-test("merges header, link and attachment findings, most severe first", async () => {
-  assert.deepEqual(await ids("spoofed-invoice.eml"), [
-    "link.deceptive",
-    "attachment.html-smuggling",
-    "auth.dmarc-fail",
-    "vendor.microsoft-365",
-    "url.disguised-domain",
-    "attachment.double-extension",
-    "sender.reply-to-mismatch",
-    "route.helo-mismatch",
-    "html.tracking-pixel",
-    "url.abused-tld",
-  ]);
+test("the spoofed invoice: every kind of finding, malicious indicators", async () => {
+  assert.deepEqual(await summary("spoofed-invoice.eml"), {
+    ids: [
+      "link.deceptive",
+      "attachment.html-smuggling",
+      "auth.dmarc-fail",
+      "vendor.microsoft-365",
+      "url.disguised-domain",
+      "attachment.double-extension",
+      "sender.reply-to-mismatch",
+      "route.helo-mismatch",
+      "html.tracking-pixel",
+      "url.abused-tld",
+    ],
+    score: 100,
+    band: "malicious",
+  });
 });
 
-test("uses the organisation's domains for both header and link checks", async () => {
-  const report = await analyzeEmail(parseEmail(read("spoofed-invoice.eml")), { orgDomains: ["rhone-energie.fr"], parseHtml });
+test("uses the organisation's domains", async () => {
+  const report = await analyse("spoofed-invoice.eml", ["rhone-energie.fr"]);
   assert.match(report.findings.find((f) => f.id === "auth.dmarc-fail")?.title ?? "", /your own domain/);
 });
 
-test("finds nothing on the clean newsletter", async () => {
-  assert.deepEqual(await ids("clean-newsletter.eml"), []);
+test("the clean newsletter: nothing, and its DKIM body hash matches", async () => {
+  const report = await analyse("clean-newsletter.eml");
+  assert.deepEqual(report.findings, []);
+  assert.deepEqual([report.score.score, report.score.band], [0, "clean"]);
+  assert.deepEqual(report.dkim.map((c) => c.result), ["match"]);
 });
 
-test("combines the lookalike's sender and link findings", async () => {
-  assert.deepEqual((await ids("lookalike-paypal.eml")).sort(), [
+test("the PayPal lookalike: likely phishing", async () => {
+  const { ids, score, band } = await summary("lookalike-paypal.eml");
+  assert.deepEqual([...ids].sort(), [
     "html.broken-words",
     "html.password-form",
     "link.hidden",
@@ -44,24 +57,40 @@ test("combines the lookalike's sender and link findings", async () => {
     "url.lookalike",
     "url.shortener",
   ]);
+  assert.deepEqual([score, band], [60, "likely-phishing"]);
 });
 
-test("follows the QR code of the quishing email", async () => {
-  assert.deepEqual(await ids("quishing-qr.eml"), [
-    "url.disguised-domain",
-    "sender.brand-impersonation",
-    "attachment.qr-code",
-    "url.abused-tld",
-  ]);
+test("the quishing email: likely phishing", async () => {
+  assert.deepEqual(await summary("quishing-qr.eml"), {
+    ids: ["url.disguised-domain", "attachment.qr-code", "sender.brand-impersonation", "url.abused-tld"],
+    score: 43,
+    band: "likely-phishing",
+  });
 });
 
-test("reports the macro document and the reversed archive", async () => {
-  assert.deepEqual(await ids("macro-docm.eml"), ["attachment.macros", "attachment.remote-template", "url.abused-tld"]);
-  assert.deepEqual((await ids("rtlo-archive.eml")).sort(), ["attachment.archive-hides-program", "attachment.rtlo"]);
+test("the macro document and the reversed archive: malicious whatever the score", async () => {
+  assert.deepEqual(await summary("macro-docm.eml"), {
+    ids: ["attachment.macros", "attachment.remote-template", "url.abused-tld"],
+    score: 36,
+    band: "malicious",
+  });
+  const rtlo = await summary("rtlo-archive.eml");
+  assert.deepEqual([[...rtlo.ids].sort(), rtlo.score, rtlo.band], [["attachment.archive-hides-program", "attachment.rtlo"], 30, "malicious"]);
 });
 
-test("handles pasted headers, which have no body", async () => {
-  const report = await analyzeEmail(parseHeadersOnly("From: a@b.com\nSubject: x"), { orgDomains: [], parseHtml });
+test("the DocuSign .msg: suspicious", async () => {
+  assert.deepEqual(await summary("docusign.msg"), {
+    ids: ["url.disguised-domain", "auth.compauth-fail", "sender.brand-impersonation", "url.abused-tld"],
+    score: 38,
+    band: "suspicious",
+  });
+});
+
+test("pasted headers are scored on what they show", async () => {
+  const source = read("spoofed-invoice.eml").toString("utf8");
+  const report = await analyzeEmail(parseHeadersOnly(source.slice(0, source.indexOf("\n\n"))), { orgDomains: [], parseHtml });
+  assert.deepEqual([report.score.score, report.score.band], [45, "likely-phishing"]);
   assert.deepEqual(report.links.links, []);
   assert.deepEqual(report.attachments, []);
+  assert.deepEqual(report.dkim, []);
 });
