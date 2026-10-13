@@ -1,6 +1,6 @@
 # Perspicax — design
 
-Date: 2026-10-13 · Status: approved (visual direction still to be chosen, see §8)
+Date: 2026-10-13 · Status: approved (visual direction chosen 2026-10-13, see §8)
 
 *Perspicax* (Latin, "sharp-sighted"). A fully offline phishing email analyser for SOC analysts: drop an email, get a scored verdict with every finding explained, all links and IOCs extracted, and one-click pivots to external services — without the tool itself ever making a network request.
 
@@ -19,7 +19,7 @@ Non-goals (V1): sending data to any API, live DNS/WHOIS lookups, batch/campaign 
 
 - **Same stack as Innomi**: Next.js static export (`output: "export"`), React 19, Tailwind 4, TypeScript, tests with `node:test`, license to match Innomi (AGPL-3.0-only).
 - **No backend, no network at runtime.** No API routes, no analytics, no CDN, self-hosted fonts. Pivot links open in a new tab only when the analyst clicks them.
-- **The email is never persisted.** It lives in React state only; reload wipes it. Only settings are stored (`localStorage`, one versioned key): organisation domains, pivot services, display options.
+- **The email is never persisted.** It lives in React state only; reload wipes it. Only settings are stored (`localStorage`, one versioned key `perspicax.settings.v1`): organisation domains, pivot services, display options, theme.
 - Bundled dependencies are allowed when they run locally (no network): `.msg` reader (OLE/CFB), ZIP reader (OOXML macro detection), QR decoder. Everything else is written in-house.
 - Engine code in `src/lib/` is framework-free TypeScript so it can be unit-tested and later reused in a browser extension.
 
@@ -47,7 +47,8 @@ Data flow: `input → (mime | msg | headers-only) → ParsedEmail → analysers 
 - **Verdict**: score, verdict band, top findings with their evidence.
 - **Tabs**: Headers (relay timeline, authentication, sender consistency, vendor verdicts) · Links (every link with origin, displayed vs real destination, unwrapped URL, flags) · Attachments (hashes, real type, flags) · IOCs (grouped, copy defanged or raw, pivot buttons) · Safe preview · Raw source.
 - **Safe preview**: HTML rendered in a sandboxed `iframe` (`sandbox` without `allow-scripts`, `srcdoc`, CSP `default-src 'none'`), remote images replaced by placeholders — opening an email in Perspicax never fires its tracking pixels.
-- **Settings**: organisation domains, pivot services, defang default.
+- **Settings**: organisation domains, pivot services, defang default, theme.
+- **Theme switch**: a segmented control in the top bar (Console · Dossier · Suisse), see §8.
 
 ## 5. Privacy guarantees (to be stated in the README, like Innomi)
 
@@ -61,18 +62,32 @@ No server, no network request carrying the email, nothing persisted except setti
 
 ## 7. Milestones
 
-1. Scaffold (Innomi stack) + `mime/` + headers-only mode + Headers tab.
+1. Scaffold (Innomi stack) + theme system with all three themes and the switch + `mime/` + headers-only mode + Headers tab.
 2. `html/` + `urls/` + Links tab + safe preview.
 3. `attachments/` + `ioc/` + `pivots/` + IOCs and Attachments tabs.
 4. `msg/`, `dkim/`, `score/`, report export, settings.
-5. Visual polish per the chosen direction, README, fixtures complete.
+5. Visual polish of the three themes, README, fixtures complete.
 
-## 8. Visual direction (open)
+## 8. Visual direction
 
-Requirement from the user: **no "AI-generated" look** — avoid purple/blue gradients, glassmorphism, soft rounded cards everywhere, emoji headings, sparkle icons, generic centered hero layouts.
+Requirement from the user: **no "AI-generated" look** — no purple/blue gradients, glassmorphism, soft rounded cards everywhere, emoji headings, sparkle icons, generic centered hero layouts.
 
-Candidate directions to compare with real mockups before milestone 1 UI work:
+The three candidate directions were compared as mockups of the same screen (verdict + Headers tab, same sample email). Decision: **ship all three as themes, with a switch; Swiss is the default.**
 
-- **Forensic console** — dense, monospace-forward, dark background with a single amber/green signal colour; tables and timelines like Wireshark or a disassembler.
-- **Case file / printed report** — paper-white, serif headings, typewriter details, red-pen annotations and stamps for findings; reads like an incident report.
-- **Swiss / industrial** — strict grid, black rules, no shadows or gradients, one accent colour, large numerals for the score, tabular data first.
+| Theme (`data-theme`) | Look | Score block | Severity | Relay chain |
+|---|---|---|---|---|
+| `suisse` (default) | Off-white, black rules, strict 12-column grid, no shadows, one accent (`#ff3d00`), Archivo + IBM Plex Mono | Very large numeral, 0–100 scale with band thresholds and a marker | Accent square (high), black square (medium), outlined square (low) | Hops as columns, large hop numbers |
+| `console` | Warm near-black, all monospace (IBM Plex Mono), single amber signal (`#f2a900`) | Numeral + segmented gauge, inverted band label | Inverted amber block (high), amber text (medium), dim text (low) | Dense table with tree glyphs, status bar footer |
+| `dossier` | Paper cream, Source Serif 4 headings and body, Courier Prime for values, red pen (`#b3261e`) | Rotated red stamp with the score | Wavy red underline on evidence, failures circled | Ledger list with time in the left margin, explanations as margin notes |
+
+Rules:
+
+- **One DOM, CSS-only themes.** Components use semantic classes and Tailwind tokens; a theme changes tokens (colours, fonts, rules, density) and layout variants via `data-theme` on `<html>`. No per-theme components and no hard-coded colours or fonts in components. Elements that only one theme shows (e.g. the gauge, the scale) are present in the DOM and hidden by the other themes.
+- **No per-theme content.** The dossier's margin notes are each finding's `explanation`, shown by every theme.
+- `console` is dark, `suisse` and `dossier` are light; the switch doubles as dark mode, there is no separate setting.
+- The chosen theme is stored in `perspicax.settings.v1`; a small inline script in `<head>` applies it before first paint (no flash on the static export).
+- Fonts are self-hosted through `next/font` (downloaded at build time, no runtime request).
+- Common to all themes: border radius 0, no shadows, no gradients except the console gauge segments, no icons other than functional glyphs, tabular numerals for numbers.
+- The browser smoke test runs every fixture in each of the three themes.
+
+Mockups: `.superpowers/brainstorm/` (local, not committed).
