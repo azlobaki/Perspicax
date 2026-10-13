@@ -15,6 +15,8 @@ const ORIGIN_LABEL: Record<LinkOrigin, string> = {
   link: "stylesheet",
   frame: "frame",
   media: "media",
+  file: "in file",
+  qr: "QR code",
 };
 
 const FLAG_LABEL: Record<UrlFlag, string> = {
@@ -106,6 +108,7 @@ function LinkRow({ link, n, badges: list }: { link: Link; n: number; badges: Bad
       <span className={LABEL}>{ORIGIN_LABEL[link.origin]}</span>
       <div className="min-w-0">
         {link.text && <p className="font-semibold console:text-xs console:font-normal dossier:font-normal dossier:italic">{link.text.slice(0, 200)}</p>}
+        {link.attachment && <p className="text-xs text-muted">in attachment {link.attachment}</p>}
         <p className={`${DATA} [overflow-wrap:anywhere]`}>
           <Breakable text={shown} />
         </p>

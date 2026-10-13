@@ -7,15 +7,17 @@ import { formatUtc } from "@/lib/format";
 import { isClickable } from "@/lib/links/analyze";
 import { decodeEncodedWords } from "@/lib/mime/encoded-words";
 import { getHeader } from "@/lib/mime/headers";
+import AttachmentsTab from "./AttachmentsTab";
 import FindingsPanel from "./FindingsPanel";
 import HeadersTab from "./HeadersTab";
+import IocsTab from "./IocsTab";
 import LinksTab from "./LinksTab";
 import PreviewTab from "./PreviewTab";
 import RawTab from "./RawTab";
 import Tabs from "./Tabs";
 import { DATA, LABEL } from "./ui";
 
-type TabId = "headers" | "links" | "preview" | "raw";
+type TabId = "headers" | "links" | "attachments" | "iocs" | "preview" | "raw";
 
 export default function ReportView({ email, report }: { email: ParsedEmail; report: EmailReport }) {
   const [tab, setTab] = useState<TabId>("headers");
@@ -71,6 +73,8 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
         tabs={[
           { id: "headers", label: "Headers" },
           { id: "links", label: "Links", count: report.links.links.filter(isClickable).length },
+          { id: "attachments", label: "Attachments", count: report.attachments.length },
+          { id: "iocs", label: "IOCs", count: report.iocs.length },
           { id: "preview", label: "Safe preview" },
           { id: "raw", label: "Raw source" },
         ]}
@@ -79,6 +83,8 @@ export default function ReportView({ email, report }: { email: ParsedEmail; repo
       >
         {tab === "headers" && <HeadersTab report={headers} headers={email.headers} />}
         {tab === "links" && <LinksTab links={report.links.links} />}
+        {tab === "attachments" && <AttachmentsTab attachments={report.attachments} />}
+        {tab === "iocs" && <IocsTab iocs={report.iocs} />}
         {tab === "preview" && <PreviewTab email={email} />}
         {tab === "raw" && <RawTab raw={email.raw} />}
       </Tabs>

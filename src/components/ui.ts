@@ -21,3 +21,7 @@ const BUTTON_BASE =
 export const BUTTON = `${BUTTON_BASE} border-rule hover:bg-ink hover:text-paper`;
 
 export const BUTTON_PRIMARY = `${BUTTON_BASE} border-ink bg-ink text-paper hover:border-signal hover:bg-signal hover:text-on-signal`;
+
+/** Compact secondary action: copy, pivot. */
+export const SMALL_BUTTON =
+  "inline-block border border-hairline px-1.5 text-xs leading-5 text-muted hover:border-rule hover:text-ink focus-visible:outline-2 focus-visible:outline-signal console:text-[11px] dossier:font-data";

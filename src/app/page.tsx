@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { decodeImage } from "@/components/decodeImage";
 import EntryPanel from "@/components/EntryPanel";
 import Footer from "@/components/Footer";
 import { parseHtml } from "@/components/parseHtml";
@@ -21,12 +22,12 @@ export default function Home() {
   const [dragging, setDragging] = useState(false);
   const nextId = useRef(0);
 
-  const analyse = useCallback((parse: () => ParsedEmail, name: string, size: number) => {
+  const analyse = useCallback(async (parse: () => ParsedEmail, name: string, size: number) => {
     try {
       const start = performance.now();
       const email = parse();
       // Organisation domains arrive with the settings panel (milestone 4).
-      const report = analyzeEmail(email, { orgDomains: [], parseHtml });
+      const report = await analyzeEmail(email, { orgDomains: [], parseHtml, decodeImage });
       const parseMs = Math.round(performance.now() - start);
       setAnalysis({ id: ++nextId.current, email, report, file: { name, size, parseMs } });
       setError(null);
@@ -42,7 +43,7 @@ export default function Home() {
         return;
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
-      analyse(() => parseEmail(bytes), file.name, bytes.length);
+      await analyse(() => parseEmail(bytes), file.name, bytes.length);
     },
     [analyse],
   );
@@ -94,7 +95,7 @@ export default function Home() {
           dragging={dragging}
           error={error}
           onFile={(file) => void openFile(file)}
-          onHeaders={(text) => analyse(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
+          onHeaders={(text) => void analyse(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
         />
       )}
       <Footer />
