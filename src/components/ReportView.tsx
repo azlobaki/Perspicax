@@ -41,7 +41,7 @@ export default function ReportView({ email, report, file, defang, pivots }: {
         <div className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-12">
           <VerdictBlock score={report.score} />
           <p className={`${LABEL} mt-6 console:mt-3 dossier:mt-0`}>Subject</p>
-          <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:pr-56 dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
+          <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:sm:pr-56 dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
             {headers.subject || "(no subject)"}
           </h1>
           <dl className="mt-4 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-sm console:mt-2 console:grid-cols-[9ch_minmax(0,1fr)] console:gap-y-0 console:text-xs dossier:gap-y-0 dossier:border-t dossier:border-hairline dossier:*:border-b dossier:*:border-hairline dossier:*:py-1">

@@ -27,7 +27,7 @@ In `scripts/smoke.mjs`, just before the `} finally {` line of the main `try`, ad
 
 ```js
   // Phone width: every tab of the richest fixture, in every theme, without horizontal scrolling.
-  await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   for (const theme of THEMES) {
     await load(base);
     await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme }))})`);

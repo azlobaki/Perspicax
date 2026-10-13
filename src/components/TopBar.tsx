@@ -41,9 +41,9 @@ export default function TopBar({
           </div>
         </dl>
       )}
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
         {file && (
-          <button type="button" className={BUTTON} onClick={onClose}>
+          <button type="button" className={`${BUTTON} whitespace-nowrap`} onClick={onClose}>
             New email
           </button>
         )}

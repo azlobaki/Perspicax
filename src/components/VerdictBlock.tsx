@@ -37,7 +37,7 @@ export function VerdictBlock({ score }: { score: Score }) {
       <div aria-hidden className="relative mt-3 h-6 max-w-sm border-t border-rule console:hidden">
         {[...BAND_FLOORS.map((f) => f.from), 100].map((from) => (
           <span key={from} className="absolute top-0 h-1.5 border-l border-rule" style={{ left: from === 100 ? "calc(100% - 1px)" : `${from}%` }}>
-            <span className="absolute top-2 -translate-x-1/2 text-[9.5px] text-muted">{from}</span>
+            <span className={`absolute top-2 text-[9.5px] text-muted ${from === 100 ? "-translate-x-full" : "-translate-x-1/2"}`}>{from}</span>
           </span>
         ))}
         <span className="absolute -top-[5px] h-[13px] w-[3px] bg-signal" style={{ left: `calc(${score.score}% - 1px)` }} />
@@ -60,7 +60,7 @@ export function VerdictStamp({ score }: { score: Score }) {
   const red = score.band !== "clean";
   return (
     <div
-      className={`pointer-events-none absolute top-6 right-0 hidden -rotate-[5deg] border-[3px] border-double px-3 pt-1.5 pb-1 text-center font-data font-bold mix-blend-multiply dossier:block ${
+      className={`pointer-events-none hidden -rotate-[5deg] justify-self-start dossier:sm:absolute dossier:sm:top-6 dossier:sm:right-0 border-[3px] border-double px-3 pt-1.5 pb-1 text-center font-data font-bold mix-blend-multiply dossier:inline-block ${
         red ? "border-signal text-signal-fg" : "border-ink text-ink"
       }`}
     >

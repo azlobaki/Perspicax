@@ -172,7 +172,7 @@ function Route({ hops }: { hops: Hop[] }) {
         <>
           <div
             aria-hidden
-            className="hidden grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-x-2 border-b border-hairline text-xs text-muted console:grid"
+            className="hidden grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-x-2 border-b border-hairline text-xs text-muted console:sm:grid"
           >
             <span>#</span>
             <span>time</span>
@@ -197,7 +197,7 @@ function HopItem({ hop }: { hop: Hop }) {
   const host = hop.helo ?? hop.rdns ?? hop.ip ?? "unknown";
   const transport = [hop.protocol, hop.tls ? "TLS" : null].filter(Boolean).join(" · ");
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] content-start gap-x-2 border-r border-hairline px-3 pt-2 pb-3 first:pl-0 last:border-r-0 console:grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] console:border-r-0 console:p-0 console:text-xs dossier:grid-cols-[5.5rem_1.75rem_minmax(0,1fr)] dossier:border-r-0 dossier:border-b dossier:px-0 dossier:py-1.5">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] content-start gap-x-2 border-r border-hairline px-3 pt-2 pb-3 first:pl-0 last:border-r-0 console:sm:grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] console:border-r-0 console:p-0 console:text-xs dossier:grid-cols-[5.5rem_1.75rem_minmax(0,1fr)] dossier:border-r-0 dossier:border-b dossier:px-0 dossier:py-1.5">
       <span className="font-display text-4xl leading-none font-extrabold tracking-tight [font-stretch:88%] console:text-xs console:font-normal console:tracking-normal console:text-muted dossier:col-start-2 dossier:row-start-1 dossier:text-sm dossier:font-semibold dossier:tracking-normal dossier:after:content-['.']">
         {hop.index}
       </span>
@@ -207,7 +207,7 @@ function HopItem({ hop }: { hop: Hop }) {
       <span className="text-right text-xs tabular-nums text-muted console:text-left dossier:col-start-1 dossier:row-start-2 dossier:text-left dossier:font-data">
         {formatDelay(hop.delay)}
       </span>
-      <span className="col-span-3 mt-2 [overflow-wrap:anywhere] console:col-span-1 console:mt-0 dossier:col-span-1 dossier:col-start-3 dossier:row-start-1 dossier:mt-0">
+      <span className="col-span-3 mt-2 [overflow-wrap:anywhere] console:sm:col-span-1 console:sm:mt-0 dossier:col-span-1 dossier:col-start-3 dossier:row-start-1 dossier:mt-0">
         <span className={DATA}>
           <Breakable text={host} />
         </span>
@@ -217,11 +217,11 @@ function HopItem({ hop }: { hop: Hop }) {
           </span>
         )}
       </span>
-      <span className="col-span-3 text-muted [overflow-wrap:anywhere] console:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-2">
+      <span className="col-span-3 text-muted [overflow-wrap:anywhere] console:sm:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-2">
         <span className="console:hidden">by </span>
         <span className={DATA}>{hop.by ? <Breakable text={hop.by} /> : "—"}</span>
       </span>
-      <span className="col-span-3 text-xs console:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-3 dossier:text-sm dossier:italic">
+      <span className="col-span-3 text-xs console:sm:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-3 dossier:text-sm dossier:italic">
         {flags.length > 0 && <span className={`${FLAG} mr-2`}>{flags.join(" · ")}</span>}
         {transport && <span className="text-muted dossier:not-italic">{transport}</span>}
       </span>

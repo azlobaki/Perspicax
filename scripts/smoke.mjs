@@ -227,6 +227,29 @@ try {
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }
   }
+  // Phone width: every tab of the richest fixture, in every theme, without horizontal scrolling.
+  // Not emulated as "mobile": Chromium would then widen the layout viewport to fit
+  // the content, hiding the very overflow this pass looks for.
+  await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
+  for (const theme of THEMES) {
+    await load(base);
+    await evaluate(`localStorage.setItem("perspicax.settings.v1", ${JSON.stringify(JSON.stringify({ theme }))})`);
+    await load(base);
+    const { root } = await page("DOM.getDocument");
+    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
+    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
+    await evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
+    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+    for (const id of tabs) {
+      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
+      if (overflow > 0) failures.push(`${theme} at 390 px, ${id}: ${overflow} px of horizontal overflow`);
+    }
+    await evaluate(`document.getElementById("tab-headers").click()`);
+    const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+    writeFileSync(join(SHOTS, `${theme}-phone.png`), Buffer.from(data, "base64"));
+  }
 } finally {
   cdp.close();
   // Chromium keeps writing its profile until it has exited.
