@@ -1,0 +1,47 @@
+Delivered-To: claire.dupont@gmail.com
+Received: by 2002:a05:7010:4b8e:b0:3d1:5c2a:6b1f with SMTP id f14csp112233mdb;
+        Mon, 12 Oct 2026 23:02:11 -0700 (PDT)
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@librairie-exemple.fr header.s=s1 header.b=Xy12abCd;
+       spf=pass (google.com: domain of bounce+4471@em.librairie-exemple.fr designates 149.72.120.130 as permitted sender) smtp.mailfrom="bounce+4471@em.librairie-exemple.fr";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=librairie-exemple.fr
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@librairie-exemple.fr header.s=s1 header.b=Xy12abCd;
+       spf=pass (google.com: domain of bounce+4471@em.librairie-exemple.fr designates 149.72.120.130 as permitted sender) smtp.mailfrom="bounce+4471@em.librairie-exemple.fr";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=librairie-exemple.fr
+Return-Path: <bounce+4471@em.librairie-exemple.fr>
+Received: from o1.em.librairie-exemple.fr (o1.em.librairie-exemple.fr. [149.72.120.130])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1-46f0c2a1d3esi998877f8f.412.2026.10.12.23.02.10
+        for <claire.dupont@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Mon, 12 Oct 2026 23:02:11 -0700 (PDT)
+Received: by filterdrecv-5c9d8f7b4-x2k9q with SMTP id filterdrecv-5c9d8f7b4-x2k9q-1-6A0B1C2D-12
+        2026-10-13 06:02:09.123456789 +0000 UTC m=+1234.567890
+Received: from MjQ0NzE (unknown)
+	by geopod-ismtpd-3 (SG) with HTTP
+	id 9fXyZ_abQ1uVwR3sT2kL6g
+	Tue, 13 Oct 2026 06:02:09.000 +0000 (UTC)
+From: Librairie Exemple <lettre@librairie-exemple.fr>
+To: claire.dupont@gmail.com
+Subject: Nos coups de =?UTF-8?Q?c=C5=93ur_d=27octobre?=
+Date: Tue, 13 Oct 2026 06:02:09 +0000
+Message-ID: <a1b2c3d4.4471@librairie-exemple.fr>
+List-Unsubscribe: <https://lettre.librairie-exemple.fr/desabonnement?u=4471>, <mailto:unsubscribe@librairie-exemple.fr>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1_nl_4471"
+
+--b1_nl_4471
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Bonjour Claire,
+Voici nos coups de c=C5=93ur du mois.
+--b1_nl_4471
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html><body><p>Bonjour Claire,</p><p>Voici nos coups de c&oelig;ur du mois.</p>
+<p><a href=3D"https://lettre.librairie-exemple.fr/selection-octobre">Voir la s=
+=C3=A9lection</a></p></body></html>
+--b1_nl_4471--
