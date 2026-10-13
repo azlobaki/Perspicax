@@ -94,3 +94,13 @@ test("pasted headers are scored on what they show", async () => {
   assert.deepEqual(report.attachments, []);
   assert.deepEqual(report.dkim, []);
 });
+
+test("the CEO-fraud email: a display name that shows another address, likely phishing", async () => {
+  assert.deepEqual(await summary("bec-display-name.eml"), {
+    ids: ["auth.dmarc-fail", "sender.display-name-address", "sender.reply-to-mismatch", "route.helo-mismatch"],
+    score: 45,
+    band: "likely-phishing",
+  });
+  const own = await analyse("bec-display-name.eml", ["rhone-energie.fr"]);
+  assert.ok(own.findings.some((f) => f.id === "sender.org-impersonation"));
+});

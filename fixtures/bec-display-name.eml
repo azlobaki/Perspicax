@@ -1,0 +1,25 @@
+Received: from mail.rhone-energie-direction.com (unknown [80.94.95.211])
+	by mx01.rhone-energie.fr (Postfix) with ESMTPS id 7C1D2E3F4A
+	for <comptabilite@rhone-energie.fr>; Wed, 14 Oct 2026 07:02:11 +0200 (CEST)
+Authentication-Results: mx01.rhone-energie.fr;
+	spf=softfail smtp.mailfrom=rhone-energie-direction.com;
+	dkim=none;
+	dmarc=fail (p=none dis=none) header.from=rhone-energie-direction.com
+Return-Path: <pdg@rhone-energie-direction.com>
+From: "pdg@rhone-energie.fr" <pdg@rhone-energie-direction.com>
+Reply-To: <direction.rhone.energie@gmail.com>
+To: <comptabilite@rhone-energie.fr>
+Subject: Virement urgent et confidentiel
+Date: Wed, 14 Oct 2026 07:02:09 +0200
+Message-ID: <bec.4471@rhone-energie-direction.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Bonjour,
+
+Je suis en réunion et ne peux pas être joint par téléphone. Merci de
+préparer aujourd'hui un virement de 48 600 € pour une acquisition
+confidentielle. Je vous transmets les coordonnées bancaires par retour.
+
+Merci de ne pas en parler pour l'instant.
