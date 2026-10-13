@@ -2,16 +2,25 @@
   {
     "file": "spoofed-invoice.eml",
     "expect": [
+      "Link text shows another destination",
       "DMARC failed for rhone-energie.fr",
-      "Replies go to a different domain",
       "Microsoft 365 classified it as phishing",
-      "Sending server misnames itself",
-      "mx01.mta-relay.click",
+      "Replies go to a different domain",
+      "rhone-energie.fr.secure-login.click",
       "CAT: PHSH"
     ]
   },
   {
     "file": "clean-newsletter.eml",
-    "expect": ["Nos coups de cœur d'octobre", "No finding in the headers", "mx.google.com"]
+    "expect": ["Nos coups de cœur d'octobre", "No finding", "mx.google.com"]
+  },
+  {
+    "file": "lookalike-paypal.eml",
+    "expect": [
+      "Password form inside the email",
+      "Lookalike domain",
+      "pаypal.com (xn--pypal-4ve.com) imitates paypal.com",
+      "Display name invokes PayPal"
+    ]
   }
 ]

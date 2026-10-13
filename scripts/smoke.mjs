@@ -115,13 +115,14 @@ const { proc, profile, wsUrl } = await launch();
 const cdp = connect(wsUrl);
 const failures = [];
 const external = [];
+const errors = [];
 
 try {
   await cdp.opened;
   const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank" });
   const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
   const page = (method, params) => cdp.send(method, params, sessionId);
-  for (const domain of ["Page", "Network", "Runtime", "DOM"]) await page(`${domain}.enable`);
+  for (const domain of ["Page", "Network", "Runtime", "DOM", "Log"]) await page(`${domain}.enable`);
   await page("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: 1000, deviceScaleFactor: 1, mobile: false });
   cdp.on((msg) => {
     if (msg.method !== "Network.requestWillBeSent" || msg.sessionId !== sessionId) return;
@@ -129,6 +130,18 @@ try {
     // Only network schemes count: browser-internal ones (chrome-extension:,
     // data:, blob:) never leave the machine.
     if (/^(https?|wss?):/.test(url) && !url.startsWith(base)) external.push(url);
+  });
+  // CSP violations, React errors and uncaught exceptions all land here.
+  cdp.on((msg) => {
+    if (msg.sessionId !== sessionId) return;
+    if (msg.method === "Runtime.exceptionThrown") {
+      const details = msg.params.exceptionDetails;
+      errors.push(details.exception?.description ?? details.text);
+    } else if (msg.method === "Log.entryAdded" && msg.params.entry.level === "error") {
+      errors.push(msg.params.entry.text);
+    } else if (msg.method === "Runtime.consoleAPICalled" && msg.params.type === "error") {
+      errors.push(msg.params.args.map((a) => a.value ?? a.description).join(" "));
+    }
   });
 
   const load = async (url) => {
@@ -142,6 +155,19 @@ try {
     return result.result.value;
   };
   const screenshot = async (name) => {
+    // Chromium leaves iframes blank in captures beyond the viewport, so a page
+    // showing one (the safe preview) is captured as the viewport around it.
+    const framed = await evaluate(`(() => {
+      const frame = document.querySelector("iframe");
+      if (frame) frame.scrollIntoView({ block: "end" });
+      return frame !== null;
+    })()`);
+    if (framed) {
+      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      const { data } = await page("Page.captureScreenshot", { format: "png" });
+      writeFileSync(join(SHOTS, name), Buffer.from(data, "base64"));
+      return;
+    }
     const { cssContentSize } = await page("Page.getLayoutMetrics");
     const { data } = await page("Page.captureScreenshot", {
       format: "png",
@@ -182,7 +208,13 @@ try {
       for (const want of fixture.expect) {
         if (!text.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
       }
-      await screenshot(`${theme}-${fixture.file.replace(/\W+/g, "-")}.png`);
+      const name = `${theme}-${fixture.file.replace(/\W+/g, "-")}`;
+      const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+      for (const id of tabs) {
+        await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+        await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+        await screenshot(`${name}-${id.replace(/^tab-/, "")}.png`);
+      }
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }
   }
@@ -195,6 +227,7 @@ try {
 
 if (external.length > 0) console.error(`External requests:\n  ${[...new Set(external)].join("\n  ")}`);
 if (external.length > 0 && failures.length === 0) failures.push(`${external.length} external request(s)`);
+if (errors.length > 0) failures.push(`Page errors:\n  ${[...new Set(errors)].join("\n  ")}`);
 if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exit(1);
