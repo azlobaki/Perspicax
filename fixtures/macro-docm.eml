@@ -1,0 +1,49 @@
+Received: from smtp.banque-cotes.fr (smtp.banque-cotes.fr [62.210.18.77])
+        by mx.google.com with ESMTPS id 9b8c7d6e5f4a
+        for <claire.dupont@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 13 Oct 2026 01:05:44 -0700 (PDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@banque-cotes.fr header.s=mail;
+       spf=pass (google.com: domain of releves@banque-cotes.fr designates 62.210.18.77 as permitted sender) smtp.mailfrom=releves@banque-cotes.fr;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=banque-cotes.fr
+Return-Path: <releves@banque-cotes.fr>
+From: Banque des =?UTF-8?Q?C=C3=B4tes?= <releves@banque-cotes.fr>
+To: claire.dupont@gmail.com
+Subject: =?UTF-8?Q?Votre_relev=C3=A9_d=27octobre?=
+Date: Tue, 13 Oct 2026 08:05:43 +0000
+Message-ID: <releve.4471@banque-cotes.fr>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mix_docm"
+
+--mix_docm
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Bonjour,
+
+Votre relevé d'octobre est joint. Activez le contenu à l'ouverture pour l'afficher.
+--mix_docm
+Content-Type: application/vnd.ms-word.document.macroEnabled.12; name="Releve_compte_2026-10.docm"
+Content-Disposition: attachment; filename="Releve_compte_2026-10.docm"
+Content-Transfer-Encoding: base64
+
+UEsDBBQAAAAIAABQTV1W4zNKpgAAANcAAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbD2OOw7CMBBE
+rxK5RfEGCgoUOwWiBQousNhLYhF/ZJsAt8cGiXI1+95MP7zs3CwUk/FOsDXv2CD7yztQakrikmBT
+zmEHkNREFhP3gVxJbj5azOWMIwRUdxwJNl23BeVdJpfbXB1M9qcij0ZTc8aYj2hJMHj6qEF79bDl
+kxcba/Y/rDYLhiHMRmEum2BxmtvUVoT/EYsq+oPD60wlReNWVQKyh+90+QFQSwMEFAAAAAgAAFBN
+XW6oB0yeAAAA0wAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDWO0Q3CMAxEV4kyQFP44KMqrRglpG4b
+KbEjJ22BjZiDxXCE+Hm2dbrz9eMjBrUDZ0941aem1ePQH91EbouARYmMuTuuei0ldcZkt0K0uaEE
+KNpMHG2RkxdzEE+JyUHOHpcYzLltLyZaj7pG3ml61pkquKIMN1f8Di8VQDnCAripRBsrO89eHnEV
+GALsn3fTm+qoFLNQcoS/VFn+jYcvUEsDBBQAAAAIAABQTV0OupMZuAAAAD0BAAAcAAAAd29yZC9f
+cmVscy9zZXR0aW5ncy54bWwucmVsc43QvQrCQAwA4Fcpt9tURQdp66KDg4v4AuEu/cHeD3dR9O2N
+VMGCg2P+voSU27sdshvF1HtXqXleqG1dnmhAlkTq+pAy6XCpUh1z2AAk3ZHFlPtATiqNjxZZwthC
+QH3BlmBRFGuI34aamtnBVCoezFxl50egf2zfNL2mnddXS45/rABkRpk3Z7JB8iQ2xpZ41JPw2rjZ
+6CzXq5x9AH73ppdFN8qNZ/sZPHojp+3vTNHhoKAuYfKY+glQSwMEFAAAAAgAAFBNXSd7xkoNAAAA
+QAAAABMAAAB3b3JkL3ZiYVByb2plY3QuYmluu3Be8MHCjVIPGcgEAFBLAQIUABQAAAAIAABQTV1W
+4zNKpgAAANcAAAATAAAAAAAAAAAAAAAAAAAAAABbQ29udGVudF9UeXBlc10ueG1sUEsBAhQAFAAA
+AAgAAFBNXW6oB0yeAAAA0wAAABEAAAAAAAAAAAAAAAAA1wAAAHdvcmQvZG9jdW1lbnQueG1sUEsB
+AhQAFAAAAAgAAFBNXQ66kxm4AAAAPQEAABwAAAAAAAAAAAAAAAAApAEAAHdvcmQvX3JlbHMvc2V0
+dGluZ3MueG1sLnJlbHNQSwECFAAUAAAACAAAUE1dJ3vGSg0AAABAAAAAEwAAAAAAAAAAAAAAAACW
+AgAAd29yZC92YmFQcm9qZWN0LmJpblBLBQYAAAAABAAEAAsBAADUAgAAAAA=
+--mix_docm--

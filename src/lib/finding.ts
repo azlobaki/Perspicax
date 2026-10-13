@@ -1,7 +1,6 @@
 export type Severity = "info" | "low" | "medium" | "high";
 
-/** Milestone 3 adds attachment and body categories. */
-export type FindingCategory = "auth" | "sender" | "route" | "vendor" | "link" | "html";
+export type FindingCategory = "auth" | "sender" | "route" | "vendor" | "link" | "html" | "attachment";
 
 export type Finding = {
   /** Stable machine id, e.g. `auth.dmarc-fail`. */
