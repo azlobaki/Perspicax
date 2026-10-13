@@ -13,7 +13,7 @@ const run = (email: ParsedEmail, fromDomain: string | null) =>
   analyzeLinks(email, email.html ? parse(email.html) : null, { fromDomain, references });
 const fixture = (name: string) => parseEmail(readFileSync(new URL(`../../../fixtures/${name}`, import.meta.url)));
 const htmlEmail = (html: string | null, text: string | null = null): ParsedEmail => ({
-  source: "eml", headers: [], text, html, attachments: [], raw: "", warnings: [],
+  source: "eml", headers: [], text, html, attachments: [], raw: "", rawBody: null, warnings: [],
 });
 
 test("finds the deceptive Safe Links link and the pixel in the spoofed invoice", () => {

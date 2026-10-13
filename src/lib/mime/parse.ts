@@ -20,7 +20,8 @@ const EXTENSIONS: Record<string, string> = {
 /** Parses a complete RFC 5322 / MIME message. Never throws on malformed input. */
 export function parseEmail(bytes: Uint8Array): ParsedEmail {
   const warnings: string[] = [];
-  const root = parsePart(bytesToBinary(bytes), 0, warnings);
+  const binary = bytesToBinary(bytes);
+  const root = parsePart(binary, 0, warnings);
   const email: ParsedEmail = {
     source: "eml",
     headers: root.headers,
@@ -28,6 +29,7 @@ export function parseEmail(bytes: Uint8Array): ParsedEmail {
     html: null,
     attachments: [],
     raw: decodeUtf8OrLegacy(bytes),
+    rawBody: binaryToBytes(splitHeaderBody(binary).body),
     warnings,
   };
   collect(root, email);
@@ -46,6 +48,7 @@ export function parseHeadersOnly(text: string): ParsedEmail {
     html: null,
     attachments: [],
     raw: trimmed,
+    rawBody: null,
     warnings,
   };
 }

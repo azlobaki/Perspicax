@@ -21,6 +21,10 @@ Received: from MjQ0NzE (unknown)
 	by geopod-ismtpd-3 (SG) with HTTP
 	id 9fXyZ_abQ1uVwR3sT2kL6g
 	Tue, 13 Oct 2026 06:02:09.000 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=librairie-exemple.fr;
+        s=s1; h=from:to:subject:date:message-id:mime-version:content-type;
+        bh=S00e+7KhCBp8lX8P5jbJWAv2WT1A0b5fBpAuErQ5WP4=;
+        b=Xy12abCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdefghijklmnopqrstuvwx
 From: Librairie Exemple <lettre@librairie-exemple.fr>
 To: claire.dupont@gmail.com
 Subject: Nos coups de =?UTF-8?Q?c=C5=93ur_d=27octobre?=

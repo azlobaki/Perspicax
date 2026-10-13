@@ -34,5 +34,7 @@ export type ParsedEmail = {
   attachments: Attachment[];
   /** Human-readable source for the Raw tab. */
   raw: string;
+  /** Body bytes exactly as in the file, after the header block: what DKIM signed. Null for .msg and pasted headers. */
+  rawBody: Uint8Array | null;
   warnings: string[];
 };
