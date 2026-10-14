@@ -225,7 +225,7 @@ const en = {
   footer: {
     disclaimer: "Decision support only: verdicts are heuristics, they can be wrong either way, and they never replace a qualified human analysis.",
     offline: "Offline · the email never leaves this tab",
-    legal: "Mentions légales",
+    legal: "Legal notice",
     source: "Source",
   },
   page: {
