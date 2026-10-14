@@ -90,3 +90,21 @@ test("leaves real brand domains, the organisation itself and free mail alone", (
     assert.equal(findings.find((f) => f.id === "sender.lookalike-domain"), undefined, from);
   }
 });
+
+test("flags a protected person's name on an outside address", () => {
+  const vips = ["Claire Martin", "Jean-Pierre Dupont"];
+  const findings = (from: string, org = ["rhone-energie.fr"]) =>
+    senderFindings(senderInfo(headers({ From: from })), org, vips).filter((f) => f.id === "sender.vip-impersonation");
+
+  const [webmail] = findings('"MARTIN Claire" <claire.martin.direction@gmail.com>');
+  assert.equal(webmail.severity, "high");
+  assert.equal(webmail.weight, 20);
+  assert.match(webmail.title, /Claire Martin/);
+  assert.match(webmail.explanation, /free webmail/);
+  assert.equal(findings("Jean-Paul Dupont <jp@dupont-conseil.top>").length, 0, "a different name");
+  assert.equal(findings("=?utf-8?Q?Jean_Pierre_DUPONT?= <jp@dupont-conseil.top>").length, 1, "accents, case and hyphens");
+  assert.equal(findings("Claire Martin <c.martin@rhone-energie.fr>").length, 0, "the real address");
+  assert.equal(findings("Claire Martin <c.martin@mail.rhone-energie.fr>").length, 0, "a subdomain of it");
+  assert.equal(findings("Claire Dubois <c.dubois@gmail.com>").length, 0, "only one of the names");
+  assert.match(findings("Claire Martin <c.martin@gmail.com>", [])[0].explanation, /Settings/);
+});

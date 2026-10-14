@@ -29,6 +29,8 @@ export const CATEGORY_CAPS: Record<FindingCategory, number> = {
   link: 40,
   html: 30,
   attachment: 45,
+  // What the text asks for: a bank-details change, so far.
+  content: 25,
 };
 
 // Artefacts that are malicious in themselves, not merely suspicious.

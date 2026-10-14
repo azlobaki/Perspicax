@@ -1,3 +1,4 @@
+import { bankChangeFindings } from "./content/bank.ts";
 import { analyzeAttachments, attachmentFindings, type AttachmentReport, type ImageDecoder } from "./attachments/analyze.ts";
 import { dkimChecks, dkimFindings, type DkimCheck } from "./dkim/bodyhash.ts";
 import type { ParsedEmail } from "./email.ts";
@@ -22,6 +23,8 @@ export type EmailReport = {
 
 export type AnalyzeOptions = {
   orgDomains: string[];
+  /** Protected people's names (Settings). */
+  vipNames?: string[];
   /** Builds an inert Document: the browser's DOMParser in the app, linkedom in tests. */
   parseHtml: (html: string) => Document;
   /** Decodes images for QR codes; without it, images are not scanned. */
@@ -30,17 +33,29 @@ export type AnalyzeOptions = {
 
 /** Asynchronous because hashing (WebCrypto) and image decoding are. */
 export async function analyzeEmail(email: ParsedEmail, options: AnalyzeOptions): Promise<EmailReport> {
-  const headers = analyzeHeaders(email, { orgDomains: options.orgDomains });
+  const headers = analyzeHeaders(email, { orgDomains: options.orgDomains, vipNames: options.vipNames });
   const attachments = await analyzeAttachments(email.attachments, { decodeImage: options.decodeImage });
   const dkim = await dkimChecks(email);
   const references = referencesFor(options.orgDomains);
+  const doc = email.html ? options.parseHtml(email.html) : null;
   const links = analyzeLinks(
     email,
-    email.html ? options.parseHtml(email.html) : null,
+    doc,
     { fromDomain: headers.sender.from?.domain ?? null, references },
     attachments.map((a) => ({ name: a.visibleName, html: a.html ? options.parseHtml(a.html) : null, urls: a.urls, qr: a.qr })),
   );
-  const findings = sortFindings([...headers.findings, ...dkimFindings(dkim), ...links.findings, ...attachmentFindings(attachments)]);
+  const content = bankChangeFindings({
+    texts: [headers.subject, email.text, doc?.body?.textContent ?? null],
+    fromDomain: headers.sender.from?.domain ?? null,
+    orgDomains: options.orgDomains,
+  });
+  const findings = sortFindings([
+    ...headers.findings,
+    ...dkimFindings(dkim),
+    ...links.findings,
+    ...attachmentFindings(attachments),
+    ...content,
+  ]);
   return {
     headers,
     links,

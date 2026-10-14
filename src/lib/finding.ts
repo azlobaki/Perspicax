@@ -1,6 +1,6 @@
 export type Severity = "info" | "low" | "medium" | "high";
 
-export type FindingCategory = "auth" | "sender" | "route" | "vendor" | "link" | "html" | "attachment";
+export type FindingCategory = "auth" | "sender" | "route" | "vendor" | "link" | "html" | "attachment" | "content";
 
 export type Finding = {
   /** Stable machine id, e.g. `auth.dmarc-fail`. */

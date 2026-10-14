@@ -29,6 +29,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const nextId = useRef(0);
   const orgDomains = settings.orgDomains.join("\n");
+  const vipNames = settings.vipNames.join("\n");
 
   const load = useCallback((parse: () => ParsedEmail, name: string, size: number) => {
     try {
@@ -42,11 +43,16 @@ export default function Home() {
     }
   }, []);
 
-  // Analyses the email in memory, and again whenever the organisation's domains change.
+  // Analyses the email in memory, and again whenever the organisation's domains or protected names change.
   useEffect(() => {
     if (!current || !settingsLoaded) return;
     let cancelled = false;
-    analyzeEmail(current.email, { orgDomains: orgDomains ? orgDomains.split("\n") : [], parseHtml, decodeImage })
+    analyzeEmail(current.email, {
+      orgDomains: orgDomains ? orgDomains.split("\n") : [],
+      vipNames: vipNames ? vipNames.split("\n") : [],
+      parseHtml,
+      decodeImage,
+    })
       .then((report) => {
         if (!cancelled) setResult({ id: current.id, report });
       })
@@ -56,7 +62,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [current, orgDomains, settingsLoaded]);
+  }, [current, orgDomains, vipNames, settingsLoaded]);
 
   const openFile = useCallback(
     async (file: File) => {

@@ -11,6 +11,8 @@ import { vendorFindings, vendorVerdicts, type VendorVerdict } from "./vendors.ts
 export type AnalysisOptions = {
   /** The analyst's own domains (settings, milestone 4): spoofing them weighs more. */
   orgDomains: string[];
+  /** Names a fraudster would borrow; on an outside address they are flagged. */
+  vipNames?: string[];
 };
 
 export type HeaderReport = {
@@ -40,7 +42,7 @@ export function analyzeHeaders(email: ParsedEmail, options: AnalysisOptions): He
     vendors,
     findings: sortFindings([
       ...authFindings(auth, sender.from?.domain ?? null, options.orgDomains),
-      ...senderFindings(sender, options.orgDomains),
+      ...senderFindings(sender, options.orgDomains, options.vipNames),
       ...routeFindings(hops),
       ...dateFindings(rawDate, hops),
       ...vendorFindings(vendors),

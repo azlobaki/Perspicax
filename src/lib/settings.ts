@@ -19,6 +19,8 @@ export type Settings = {
   theme: Theme;
   /** The analyst's own domains: spoofing them weighs more, lookalikes of them are flagged. */
   orgDomains: string[];
+  /** People a fraudster would impersonate (executives, finance): their name on an outside address is flagged. */
+  vipNames: string[];
   /** Defang indicators by default when displaying, copying and reporting. */
   defang: boolean;
   pivots: PivotService[];
@@ -27,11 +29,13 @@ export type Settings = {
 export const DEFAULT_SETTINGS: Settings = {
   theme: DEFAULT_THEME,
   orgDomains: [],
+  vipNames: [],
   defang: true,
   pivots: DEFAULT_PIVOTS,
 };
 
 const MAX_DOMAINS = 50;
+const MAX_VIPS = 100;
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && (THEMES as readonly string[]).includes(value);
@@ -55,6 +59,14 @@ export function normaliseDomain(input: string): string | null {
     return null;
   }
   return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host) && !isIPv4(host) ? host : null;
+}
+
+/** A first and a last name, spaces tidied; null for anything shorter, which would match too much. */
+export function normaliseVipName(input: string): string | null {
+  const name = input.trim().replace(/\s+/g, " ");
+  if (name.length > 80) return null;
+  const words = name.split(" ").filter((word) => /\p{L}.*\p{L}/u.test(word));
+  return words.length >= 2 ? name : null;
 }
 
 export function isValidTemplate(template: string): boolean {
@@ -95,9 +107,15 @@ export function parseSettings(value: unknown): Settings {
         .map(normaliseDomain)
         .filter((d): d is string => d !== null)
     : [];
+  const vips = new Map<string, string>();
+  for (const value of Array.isArray(raw.vipNames) ? raw.vipNames : []) {
+    const name = typeof value === "string" ? normaliseVipName(value) : null;
+    if (name && !vips.has(name.toLowerCase())) vips.set(name.toLowerCase(), name);
+  }
   return {
     theme: isTheme(raw.theme) ? raw.theme : DEFAULT_THEME,
     orgDomains: [...new Set(domains)].slice(0, MAX_DOMAINS),
+    vipNames: [...vips.values()].slice(0, MAX_VIPS),
     defang: typeof raw.defang === "boolean" ? raw.defang : true,
     pivots: "pivots" in raw ? parsePivots(raw.pivots) : DEFAULT_PIVOTS,
   };
