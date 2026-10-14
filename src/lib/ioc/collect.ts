@@ -18,7 +18,7 @@ const ORIGIN_NOUN: Record<LinkOrigin, Text> = {
   "meta-refresh": { en: "redirect", fr: "redirection" }, text: { en: "link", fr: "lien" },
   img: { en: "image", fr: "image" }, css: { en: "image", fr: "image" },
   link: { en: "stylesheet", fr: "feuille de style" }, frame: { en: "frame", fr: "cadre" },
-  media: { en: "media", fr: "média" }, file: { en: "link", fr: "lien" }, qr: { en: "QR code", fr: "QR code" },
+  media: { en: "media", fr: "média" }, file: { en: "link", fr: "lien" }, qr: { en: "QR code", fr: "code QR" },
 };
 
 /** A source that reads the same in both languages (a header name). */
@@ -106,7 +106,7 @@ export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; 
   );
   const bodyText = `${input.email.text ?? ""}\n${(input.email.html ?? "").replace(/<[^>]+>/g, " ")}`;
   for (const match of bodyText.matchAll(EMAIL_IN_TEXT)) {
-    if (!recipients.has(match[0].toLowerCase())) addEmail(match[0], { en: "body", fr: "corps" });
+    if (!recipients.has(match[0].toLowerCase())) addEmail(match[0], { en: "body", fr: "corps du message" });
   }
 
   return [...found.values()].sort((a, b) => IOC_TYPES.indexOf(a.type) - IOC_TYPES.indexOf(b.type));

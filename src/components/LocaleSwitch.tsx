@@ -1,13 +1,16 @@
 "use client";
 
-import { LOCALES, type Locale } from "@/lib/i18n/text";
+import type { Locale } from "@/lib/i18n/text";
 import { useT } from "@/i18n/LocaleContext";
+
+/** French first, as the spec shows it: FR | EN. */
+const ORDER: readonly Locale[] = ["fr", "en"];
 
 export default function LocaleSwitch({ locale, onChange }: { locale: Locale; onChange: (locale: Locale) => void }) {
   const t = useT();
   return (
     <div role="group" aria-label={t.topBar.language} className="flex border border-rule text-xs">
-      {LOCALES.map((l) => (
+      {ORDER.map((l) => (
         <button
           key={l}
           id={`locale-${l}`}

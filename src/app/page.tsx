@@ -25,8 +25,10 @@ function failure(en: string, fr: string, err: unknown): Text {
   return { en: `${en}${reason.en}`, fr: `${fr}${reason.fr}` };
 }
 
-/** The current email. It lives here, in memory, and nowhere else. */
-type Loaded = { id: number; email: ParsedEmail; file: FileMeta };
+/** The current email. It lives here, in memory, and nowhere else. Pasted headers have a name in every language. */
+type Loaded = { id: number; email: ParsedEmail; file: Omit<FileMeta, "name"> & { name: string | Text } };
+
+const PASTED_HEADERS: Text = { en: messages.en.page.pastedHeaders, fr: messages.fr.page.pastedHeaders };
 
 // OLE compound files (.msg) start with this signature, whatever their name.
 const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
@@ -42,7 +44,7 @@ export default function Home() {
   const orgDomains = settings.orgDomains.join("\n");
   const vipNames = settings.vipNames.join("\n");
 
-  const load = useCallback((parse: () => ParsedEmail, name: string, size: number) => {
+  const load = useCallback((parse: () => ParsedEmail, name: string | Text, size: number) => {
     try {
       const start = performance.now();
       const email = parse();
@@ -117,6 +119,10 @@ export default function Home() {
   }, [openFile]);
 
   const report = current && result?.id === current.id ? result.report : null;
+  const named = (file: Loaded["file"]): FileMeta => ({
+    ...file,
+    name: typeof file.name === "string" ? file.name : file.name[locale],
+  });
 
   let main: React.ReactNode;
   if (showSettings) {
@@ -127,7 +133,7 @@ export default function Home() {
         key={current.id}
         email={current.email}
         report={report}
-        file={current.file}
+        file={named(current.file)}
         defang={settings.defang}
         pivots={settings.pivots}
       />
@@ -146,7 +152,7 @@ export default function Home() {
         dragging={dragging}
         error={error ? error[locale] : null}
         onFile={(file) => void openFile(file)}
-        onHeaders={(text) => load(() => parseHeadersOnly(text), messages[locale].page.pastedHeaders, new TextEncoder().encode(text).length)}
+        onHeaders={(text) => load(() => parseHeadersOnly(text), PASTED_HEADERS, new TextEncoder().encode(text).length)}
       />
     );
   }
@@ -155,7 +161,7 @@ export default function Home() {
     <LocaleProvider locale={locale}>
       <div data-localised className="contents">
         <TopBar
-          file={current?.file ?? null}
+          file={current ? named(current.file) : null}
           theme={settingsLoaded ? settings.theme : null}
           onTheme={(theme) => setSettings((s) => ({ ...s, theme }))}
           locale={locale}

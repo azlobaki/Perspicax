@@ -13,7 +13,7 @@ export type VendorVerdict = {
 
 const SFV: Record<string, Text> = {
   BLK: { en: "Blocked: sender on the user's blocked list", fr: "Bloqué\u00a0: expéditeur dans la liste des expéditeurs bloqués de l’utilisateur" },
-  NSPM: { en: "Not spam", fr: "Pas du spam" },
+  NSPM: { en: "Not spam", fr: "Pas un spam" },
   SFE: { en: "Allowed: sender on the user's safe list", fr: "Autorisé\u00a0: expéditeur dans la liste des expéditeurs fiables de l’utilisateur" },
   SKA: { en: "Allowed by an anti-spam policy", fr: "Autorisé par une stratégie anti-spam" },
   SKB: { en: "Blocked by an anti-spam policy", fr: "Bloqué par une stratégie anti-spam" },
@@ -72,7 +72,7 @@ function colonPairs(value: string): Map<string, string> {
 
 function sclMeaning(scl: number): Text {
   if (scl === -1) return { en: "Filtering skipped", fr: "Filtrage ignoré" };
-  if (scl <= 1) return { en: "Not spam", fr: "Pas du spam" };
+  if (scl <= 1) return { en: "Not spam", fr: "Pas un spam" };
   if (scl <= 6) return { en: "Spam", fr: "Spam" };
   return { en: "High-confidence spam", fr: "Spam à forte confiance" };
 }
@@ -114,7 +114,7 @@ function microsoft(headers: readonly HeaderField[]): VendorVerdict | null {
   add("CAT", cat, cat ? (CAT[cat] ?? null) : null, cat !== undefined && cat !== "NONE");
   add("SCL", scl, scl ? sclMeaning(Number(scl)) : null, Number(scl) >= 5);
   add("BCL", bcl, bcl ? bclMeaning(Number(bcl)) : null, Number(bcl) >= 8);
-  add("PCL", pcl, pcl ? (Number(pcl) >= 4 ? { en: "Likely phishing", fr: "Phishing probable" } : { en: "Unlikely phishing", fr: "Phishing improbable" }) : null, Number(pcl) >= 4);
+  add("PCL", pcl, pcl ? (Number(pcl) >= 4 ? { en: "Likely phishing", fr: "Hameçonnage probable" } : { en: "Unlikely phishing", fr: "Hameçonnage improbable" }) : null, Number(pcl) >= 4);
   add("IPV", f.get("IPV"), IPV[f.get("IPV") ?? ""] ?? null, false);
   add("CTRY", f.get("CTRY"), { en: "Country of the connecting IP", fr: "Pays de l’IP qui se connecte" }, false);
   add("CIP", f.get("CIP"), { en: "Connecting IP", fr: "IP qui se connecte" }, false);

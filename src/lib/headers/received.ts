@@ -153,7 +153,7 @@ export function routeFindings(hops: readonly Hop[]): Finding[] {
       id: "route.helo-mismatch", category: "route", severity: "low", title: { en: "Sending server misnames itself", fr: "Le serveur d’envoi se présente sous un faux nom" },
       explanation: {
         en: "The first external server introduced itself with a name its IP address does not resolve back to. Legitimate mail servers usually have matching forward and reverse DNS.",
-        fr: "Le premier serveur externe s’est présenté sous un nom que son adresse IP ne résout pas en retour. Les serveurs de messagerie légitimes ont en général un DNS direct et inverse cohérents.",
+        fr: "Le premier serveur externe s’est présenté sous un nom auquel son adresse IP ne correspond pas en DNS inverse. Les serveurs de messagerie légitimes ont en général un DNS direct et inverse cohérents.",
       },
       evidence: [
         `HELO ${origin.helo}`,

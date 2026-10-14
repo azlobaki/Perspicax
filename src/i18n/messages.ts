@@ -346,7 +346,7 @@ const fr: Messages = {
       frame: "cadre",
       media: "média",
       file: "dans le fichier",
-      qr: "QR code",
+      qr: "code QR",
     },
     flags: {
       "javascript-url": "javascript:",
@@ -387,9 +387,9 @@ const fr: Messages = {
       "type-mismatch": "le type ne correspond pas au nom",
       macros: "macros",
       "remote-template": "modèle distant",
-      "html-smuggling": "HTML smuggling",
+      "html-smuggling": "contrebande HTML",
       "pdf-active": "contenu PDF actif",
-      "qr-code": "QR code",
+      "qr-code": "code QR",
     },
   },
   iocs: {

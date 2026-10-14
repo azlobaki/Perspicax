@@ -90,10 +90,14 @@ export const PHRASE_FR: Record<string, string> = {
   "clicks a link by script": "clique sur un lien par script",
 };
 
-function joinText(phrases: string[], separator: string): Text {
+/** French puts a non-breaking space before a semicolon. */
+const SEMICOLON: Text = { en: "; ", fr: "\u00a0; " };
+const COMMA: Text = { en: ", ", fr: ", " };
+
+function joinText(phrases: string[], separator: Text): Text {
   return {
-    en: phrases.join(separator),
-    fr: phrases.map((p) => PHRASE_FR[p] ?? p).join(separator),
+    en: phrases.join(separator.en),
+    fr: phrases.map((p) => PHRASE_FR[p] ?? p).join(separator.fr),
   };
 }
 
@@ -160,12 +164,12 @@ export async function analyzeAttachments(
       const text = decodeUtf8OrLegacy(data);
       if (detected.kind === "html") html = text;
       const found = smugglingIndicators(text);
-      if (isSmuggling(found)) flag("html-smuggling", joinText([...found.payload, ...found.delivery], "; "));
+      if (isSmuggling(found)) flag("html-smuggling", joinText([...found.payload, ...found.delivery], SEMICOLON));
     }
     if (detected.kind === "pdf") {
       const pdf = inspectPdf(data);
       urls.push(...pdf.urls);
-      if (pdf.active.length > 0) flag("pdf-active", joinText(pdf.active, ", "));
+      if (pdf.active.length > 0) flag("pdf-active", joinText(pdf.active, COMMA));
     }
     if (IMAGE_KINDS.has(detected.kind) && options.decodeImage && data.length <= MAX_IMAGE && imagesLeft > 0) {
       imagesLeft--;
@@ -202,7 +206,7 @@ const RULES: Rule[] = [
   { flag: "html-smuggling", severity: "high", weight: 20, title: { en: "HTML smuggling", fr: "Contrebande HTML" },
     explanation: {
       en: "The attachment is a web page that assembles a file inside the browser and saves it, so the file never crosses the mail filter.",
-      fr: "La pièce jointe est une page web qui assemble un fichier dans le navigateur et l’enregistre, si bien que le fichier ne traverse jamais le filtre de messagerie.",
+      fr: "La pièce jointe est une page web qui assemble un fichier dans le navigateur et l’enregistre, si bien que le fichier ne traverse jamais la passerelle de messagerie.",
     } },
   { flag: "program", severity: "high", weight: 20, title: { en: "Executable attachment", fr: "Pièce jointe exécutable" },
     explanation: {
@@ -227,7 +231,7 @@ const RULES: Rule[] = [
   { flag: "disk-image", severity: "high", weight: 15, title: { en: "Disk image attachment", fr: "Pièce jointe de type image disque" },
     explanation: {
       en: "A disk image unpacks files out of reach of mail filters, and on older systems without the downloaded-file warning.",
-      fr: "Une image disque extrait des fichiers hors de portée des filtres de messagerie, et sans l’avertissement de fichier téléchargé sur les systèmes plus anciens.",
+      fr: "Une image disque extrait des fichiers hors de portée des passerelles de messagerie, et sans l’avertissement de fichier téléchargé sur les systèmes plus anciens.",
     } },
   { flag: "archive-hides-program", severity: "high", weight: 15, title: { en: "Archive hides a program", fr: "L’archive cache un programme" },
     explanation: {
@@ -242,7 +246,7 @@ const RULES: Rule[] = [
   { flag: "rtlo", severity: "high", weight: 15, title: { en: "File name uses a direction override", fr: "Nom de fichier avec inversion du sens d’écriture" },
     explanation: {
       en: "A right-to-left override reverses the end of the name on screen, so “fdp.exe” displays as “exe.pdf”.",
-      fr: "Un caractère de droite à gauche inverse la fin du nom à l’écran\u00a0: «\u00a0fdp.exe\u00a0» s’affiche «\u00a0exe.pdf\u00a0».",
+      fr: "Un caractère de contrôle d’écriture de droite à gauche inverse la fin du nom à l’écran\u00a0: «\u00a0fdp.exe\u00a0» s’affiche «\u00a0exe.pdf\u00a0».",
     } },
   { flag: "qr-code", severity: "high", weight: 15, title: { en: "QR code in an image", fr: "Code QR dans une image" },
     explanation: {
