@@ -46,8 +46,13 @@ async function launch() {
   const profile = mkdtempSync(join(tmpdir(), "perspicax-smoke-"));
   const proc = spawn(
     process.env.CHROME ?? "chromium",
-    ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-      `--user-data-dir=${profile}`, "--remote-debugging-port=0", "about:blank"],
+    [
+      "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+      // Ubuntu 24.04 CI runners forbid the unprivileged user namespaces Chrome's
+      // sandbox needs; the pages loaded here are our own build and fixtures.
+      ...(process.env.CI ? ["--no-sandbox"] : []),
+      `--user-data-dir=${profile}`, "--remote-debugging-port=0", "about:blank",
+    ],
     { stdio: ["ignore", "ignore", "pipe"] },
   );
   const wsUrl = await new Promise((ok, fail) => {
