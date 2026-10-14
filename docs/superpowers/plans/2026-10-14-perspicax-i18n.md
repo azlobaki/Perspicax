@@ -16,7 +16,7 @@
 - No network request, no new dependency, no machine translation.
 - Settings are written only when the user changes one; a first visit writes nothing to `localStorage` (the smoke test checks it).
 - Finding ids, weights, categories, bands and the JSON structure do not change; only reader-facing strings become `Text`.
-- `evidence` stays raw: it quotes the email and is never translated.
+- `evidence` holds quotes from the email (raw strings, never translated) and our own notations, which are `Text`.
 - Theme names (Suisse, Console, Dossier), service names (VirusTotal…), indicator types (url, domain, sha256…), header names and protocol tokens (SPF, DKIM, DMARC, SCL…) are not translated.
 - The English text of every existing sentence stays exactly as it is; existing tests change only from `.title` to `.title.en` (and the like).
 - Commands: `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`, `npm run smoke` (needs `npm run build` first; `CHROME` picks the browser, default `chromium`).

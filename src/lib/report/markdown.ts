@@ -1,4 +1,5 @@
 import type { EmailReport } from "../analyze.ts";
+import { evidenceIn } from "../finding.ts";
 import type { ParsedEmail } from "../email.ts";
 import { formatDelay, formatSize, formatTime, formatUtc } from "../format.ts";
 import { AUTH_SOURCE_NOTE, entryDetails } from "../headers/auth.ts";
@@ -153,7 +154,7 @@ export function reportMarkdown(input: ReportInput): string {
   report.findings.forEach((finding, i) => {
     out.push(`${i + 1}. **${finding.title[locale]}** — ${l.severity[finding.severity]}, +${finding.weight}`);
     out.push(`   ${finding.explanation[locale]}`);
-    for (const line of finding.evidence) out.push(`   - ${code(safe(line))}`);
+    for (const line of finding.evidence) out.push(`   - ${code(safe(evidenceIn(line, locale)))}`);
   });
   out.push("");
   if (report.score.categories.length > 0) {

@@ -1,10 +1,11 @@
-import { usePick, useT } from "@/i18n/LocaleContext";
-import type { Finding } from "@/lib/finding";
+import { useLocale, usePick, useT } from "@/i18n/LocaleContext";
+import { evidenceIn, type Finding } from "@/lib/finding";
 import SeverityTag from "./SeverityTag";
 import { DATA, SECTION_TITLE } from "./ui";
 
 export default function FindingsPanel({ findings }: { findings: Finding[] }) {
   const pick = usePick();
+  const locale = useLocale();
   const t = useT();
   return (
     <section aria-labelledby="findings-title">
@@ -30,7 +31,7 @@ export default function FindingsPanel({ findings }: { findings: Finding[] }) {
                 <p className="text-muted console:text-xs">{pick(finding.explanation)}</p>
                 {finding.evidence.length > 0 && (
                   <ul className="mt-1">
-                    {finding.evidence.map((line) => (
+                    {finding.evidence.map((e) => evidenceIn(e, locale)).map((line) => (
                       <li
                         key={line}
                         className={`${DATA} break-all ${

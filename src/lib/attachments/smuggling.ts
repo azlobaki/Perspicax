@@ -14,6 +14,9 @@ const DELIVERY: [RegExp, string][] = [
   [/\.click\s*\(\s*\)/, "clicks a link by script"],
 ];
 
+/** Every phrase `smugglingIndicators` can report. */
+export const SMUGGLING_PHRASES: readonly string[] = [...PAYLOAD, ...DELIVERY].map(([, label]) => label);
+
 export type SmugglingIndicators = { payload: string[]; delivery: string[] };
 
 export function smugglingIndicators(text: string): SmugglingIndicators {

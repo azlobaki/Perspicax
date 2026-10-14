@@ -1,7 +1,7 @@
 import { BRANDS } from "../data/brands.ts";
 import { isFreeMail } from "../data/freemail.ts";
 import type { HeaderField } from "../email.ts";
-import type { Finding } from "../finding.ts";
+import { evidenceIn, type Evidence, type Finding } from "../finding.ts";
 import { parseAddressList, type Address } from "../mime/address.ts";
 import { getHeader, getHeaders } from "../mime/headers.ts";
 import { orgDomain, sameOrg } from "../net/domain.ts";
@@ -105,7 +105,13 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
     .filter((x): x is { row: SenderRow; imitates: string } => x.imitates !== null);
   if (imitations.length > 0) {
     const imitated = [...new Set(imitations.map((x) => x.imitates))].join(", ");
-    const reads = (domain: string) => (hostToUnicode(domain) !== domain ? ` (reads as ${hostToUnicode(domain)})` : "");
+    const line = (row: SenderRow): Evidence => {
+      const domain = row.domain as string;
+      const quoted = `${row.header}: ${row.value}`;
+      return hostToUnicode(domain) !== domain
+        ? { en: `${quoted} (reads as ${hostToUnicode(domain)})`, fr: `${quoted} (se lit ${hostToUnicode(domain)})` }
+        : quoted;
+    };
     findings.push({
       id: "sender.lookalike-domain", category: "sender", severity: "high",
       title: {
@@ -116,7 +122,7 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
         en: "The address is at a domain built to be mistaken for a familiar one — your organisation's or a well-known brand's. Its owner can make it pass SPF, DKIM and DMARC.",
         fr: "L’adresse appartient à un domaine conçu pour être pris pour un domaine familier, celui de votre organisation ou d’une marque connue. Son propriétaire peut lui faire passer SPF, DKIM et DMARC.",
       },
-      evidence: [...new Set(imitations.map(({ row }) => `${row.header}: ${row.value}${reads(row.domain as string)}`))],
+      evidence: [...new Map(imitations.map(({ row }) => line(row)).map((e) => [evidenceIn(e, "en"), e])).values()],
       weight: 15,
     });
   }

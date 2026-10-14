@@ -90,7 +90,8 @@ export function dateFindings(raw: string | null, hops: readonly Hop[]): Finding[
         en: "The Date header is later than the time the last server received the message. Senders forge dates to keep a message at the top of the inbox.",
         fr: "L’en-tête Date est postérieur à l’heure à laquelle le dernier serveur a reçu le message. Des expéditeurs falsifient la date pour garder un message en haut de la boîte de réception.",
       },
-      evidence: [`Date: ${raw}`, `Last relay: ${new Date(last).toISOString()}`], weight: 3,
+      evidence: [`Date: ${raw}`, { en: `Last relay: ${new Date(last).toISOString()}`, fr: `Dernier relais\u00a0: ${new Date(last).toISOString()}` }],
+      weight: 3,
     }];
   }
   if (date.getTime() < first - 7 * 24 * HOUR) {
@@ -100,7 +101,8 @@ export function dateFindings(raw: string | null, hops: readonly Hop[]): Finding[
         en: "The Date header is more than a week older than the first relay. Replayed or resent messages look like this.",
         fr: "L’en-tête Date précède de plus d’une semaine le premier relais. Les messages rejoués ou renvoyés ont cet aspect.",
       },
-      evidence: [`Date: ${raw}`, `First relay: ${new Date(first).toISOString()}`], weight: 2,
+      evidence: [`Date: ${raw}`, { en: `First relay: ${new Date(first).toISOString()}`, fr: `Premier relais\u00a0: ${new Date(first).toISOString()}` }],
+      weight: 2,
     }];
   }
   return [];

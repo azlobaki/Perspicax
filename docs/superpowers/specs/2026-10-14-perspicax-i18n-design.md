@@ -62,13 +62,17 @@ Every text field meant for a reader becomes a `Text`:
 
 | Where | Fields |
 |---|---|
-| `finding.ts` | `Finding.title`, `Finding.explanation` (`evidence` stays raw: it quotes the email) |
+| `finding.ts` | `Finding.title`, `Finding.explanation`; `Finding.evidence` is `(string \| Text)[]` (see below) |
 | `headers/vendors.ts` | `VendorField.meaning` (SFV, CAT, SCL… meanings) |
 | `headers/auth.ts` | `AUTH_SOURCE_NOTE` |
 | `score/score.ts` | `BAND_LABEL` |
 | `attachments/filetype.ts` | type descriptions ("Windows program"…) |
 | `mime/parse.ts`, `msg/parse.ts` | `ParsedEmail.warnings: Text[]` |
 | `msg/rtf.ts`, `urls/unwrap.ts`, `html/preview.ts`, `dkim/bodyhash.ts`, `headers/date.ts`, `headers/received.ts` | any reader-facing sentence they produce |
+
+`evidence` holds quotes from the email, which are raw strings and never
+translated, and our own notations ("(no action)", "no reverse DNS", a
+vendor field's meaning…), which are `Text`.
 
 Interpolated values stay template literals inside each language:
 `{ en: \`DMARC failed for ${d}\`, fr: \`Échec DMARC pour ${d}\` }`.

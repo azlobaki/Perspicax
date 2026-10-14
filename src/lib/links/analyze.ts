@@ -1,6 +1,6 @@
 import { isKnownTracker } from "../data/trackers.ts";
 import type { ParsedEmail } from "../email.ts";
-import type { Finding, Severity } from "../finding.ts";
+import { evidenceIn, noted, type Evidence, type Finding, type Severity } from "../finding.ts";
 import type { Text } from "../i18n/text.ts";
 import { extractHtml, type HtmlForm, type HtmlLink, type HtmlOrigin } from "../html/extract.ts";
 import { sameOrg } from "../net/domain.ts";
@@ -9,7 +9,7 @@ import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
 
 /** The extractor's reasons are English phrases or CSS declarations; the declarations read the same in both languages. */
-const HIDDEN_FR: Record<string, string> = {
+export const HIDDEN_FR: Record<string, string> = {
   "hidden attribute": "attribut hidden",
   "same colour as background": "même couleur que le fond",
   "zero size": "taille nulle",
@@ -182,7 +182,17 @@ const FLAG_RULES: FlagRule[] = [
     } },
 ];
 
-const unique = (items: string[]) => [...new Set(items)].slice(0, 10);
+/** First ten distinct lines, compared by their English. */
+const unique = (items: Evidence[]) => {
+  const seen = new Set<string>();
+  const out: Evidence[] = [];
+  for (const item of items) {
+    const key = evidenceIn(item, "en");
+    if (!seen.has(key)) out.push(item);
+    seen.add(key);
+  }
+  return out.slice(0, 10);
+};
 const destination = (link: Link) => link.url.final ?? link.url.raw;
 
 /** `pаypal.com (xn--pypal-4ve.com)`: the ASCII form shows what the eye cannot. */
@@ -217,7 +227,7 @@ function linkFindings(
     if (hits.length === 0) continue;
     findings.push({
       id: `url.${rule.flag}`, category: "link", severity: rule.severity, title: rule.title, explanation: rule.explanation,
-      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? `${hostLabel(l.url)} imitates ${l.url.lookalikeOf}` : destination(l)))),
+      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`) : destination(l)))),
       weight: rule.weight,
     });
   }
@@ -230,7 +240,7 @@ function linkFindings(
         en: "Links the reader cannot see are there for filters and crawlers, not for people.",
         fr: "Les liens que le lecteur ne voit pas sont destinés aux filtres et aux robots d’indexation, pas aux personnes.",
       },
-      evidence: unique(hidden.map((l) => `${destination(l)} (${l.hidden?.en})`)), weight: 6,
+      evidence: unique(hidden.map((l) => noted(`${destination(l)} (${l.hidden?.en})`, `${destination(l)} (${l.hidden?.fr})`))), weight: 6,
     });
   }
 
@@ -249,7 +259,10 @@ function linkFindings(
   }
 
   const formEvidence = (list: LocatedForm[]) =>
-    unique(list.map((f) => `${f.method.toUpperCase()} ${f.action || "(no action)"} — ${f.fields.join(", ")}${f.attachment ? ` (in ${f.attachment})` : ""}`));
+    unique(list.map((f) => noted(
+      `${f.method.toUpperCase()} ${f.action || "(no action)"} — ${f.fields.join(", ")}${f.attachment ? ` (in ${f.attachment})` : ""}`,
+      `${f.method.toUpperCase()} ${f.action || "(aucune action)"} — ${f.fields.join(", ")}${f.attachment ? ` (dans ${f.attachment})` : ""}`,
+    )));
   const passwordForms = forms.filter((f) => f.hasPassword);
   if (passwordForms.length > 0) {
     findings.push({
@@ -294,7 +307,10 @@ function linkFindings(
         en: "Direction-override characters make text display in a different order than it is written, a trick used to disguise names and links.",
         fr: "Des caractères de contrôle du sens d’écriture font s’afficher le texte dans un autre ordre que celui où il est écrit, une astuce pour déguiser des noms et des liens.",
       },
-      evidence: [`${bidiOverrides} override character${bidiOverrides === 1 ? "" : "s"} in the visible text`], weight: 6,
+      evidence: [{
+        en: `${bidiOverrides} override character${bidiOverrides === 1 ? "" : "s"} in the visible text`,
+        fr: `${bidiOverrides} caractère${bidiOverrides === 1 ? "" : "s"} d’inversion du sens d’écriture dans le texte visible`,
+      }], weight: 6,
     });
   }
   return findings;

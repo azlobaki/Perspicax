@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HeaderField } from "../email.ts";
+import { evidenceIn } from "../finding.ts";
 import { vendorFindings, vendorVerdicts } from "./vendors.ts";
 
 const headers = (lines: Record<string, string>): HeaderField[] =>
@@ -86,7 +87,7 @@ test("returns nothing when no gateway left a verdict", () => {
 test("turns verdicts into findings", () => {
   const findings = vendorFindings(vendorVerdicts(headers({ "X-Forefront-Antispam-Report": FOREFRONT })));
   assert.deepEqual(findings.map((f) => [f.id, f.severity, f.weight]), [["vendor.microsoft-365", "high", 15]]);
-  assert.ok(findings[0].evidence.includes("CAT: PHSH (Phishing)"));
+  assert.ok(findings[0].evidence.map((e) => evidenceIn(e, "en")).includes("CAT: PHSH (Phishing)"));
   const bulk = vendorFindings(vendorVerdicts(headers({ "X-Forefront-Antispam-Report": "SFV:NSPM;CAT:BULK;" })));
   assert.equal(bulk[0].severity, "info");
 });

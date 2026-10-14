@@ -18,6 +18,9 @@ const ACTIVE: [RegExp, string][] = [
   [/\/XFA\b/, "XFA form"],
 ];
 
+/** Every phrase `inspectPdf` can report in `active`. */
+export const PDF_ACTIVE_PHRASES: readonly string[] = ACTIVE.map(([, label]) => label);
+
 const MAX_INFLATED = 50_000_000;
 const MAX_STREAMS = 500;
 

@@ -1,5 +1,5 @@
 import type { Attachment } from "../email.ts";
-import type { Finding, Severity } from "../finding.ts";
+import { noted, type Finding, type Severity } from "../finding.ts";
 import type { Text } from "../i18n/text.ts";
 import { decodeUtf8OrLegacy } from "../mime/charset.ts";
 import {
@@ -72,7 +72,7 @@ const MAX_IMAGE = 10_000_000;
 const MAX_IMAGES = 20;
 
 /** Engine phrases that reach the screen; anything else (names, URLs, paths) is data and reads the same. */
-const PHRASE_FR: Record<string, string> = {
+export const PHRASE_FR: Record<string, string> = {
   JavaScript: "JavaScript",
   "runs an action when opened": "exécute une action à l’ouverture",
   "automatic actions": "actions automatiques",
@@ -302,7 +302,10 @@ export function attachmentFindings(reports: readonly AttachmentReport[]): Findin
     findings.push({
       id: `attachment.${rule.flag}`, category: "attachment", severity: rule.severity, title: rule.title,
       explanation: rule.explanation,
-      evidence: hits.map((r) => (r.details[rule.flag] ? `${r.visibleName} — ${r.details[rule.flag]?.en}` : r.visibleName)),
+      evidence: hits.map((r) => {
+        const detail = r.details[rule.flag];
+        return detail ? noted(`${r.visibleName} — ${detail.en}`, `${r.visibleName} — ${detail.fr}`) : r.visibleName;
+      }),
       weight: rule.weight,
     });
   }

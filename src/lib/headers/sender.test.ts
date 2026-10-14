@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HeaderField } from "../email.ts";
+import { evidenceIn } from "../finding.ts";
 import { senderFindings, senderInfo } from "./sender.ts";
 
 const headers = (lines: Record<string, string>): HeaderField[] =>
@@ -81,7 +82,7 @@ test("flags a sender domain that imitates the organisation's or a brand's", () =
   assert.equal(senderFindings(bec, []).find((f) => f.id === "sender.lookalike-domain"), undefined);
 
   const paypal = senderFindings(senderInfo(headers({ From: "PayPal <service@xn--pypal-4ve.com>" })), []);
-  assert.deepEqual(paypal.find((f) => f.id === "sender.lookalike-domain")?.evidence, ["From: service@xn--pypal-4ve.com (reads as pаypal.com)"]);
+  assert.deepEqual(paypal.find((f) => f.id === "sender.lookalike-domain")?.evidence.map((e) => evidenceIn(e, "en")), ["From: service@xn--pypal-4ve.com (reads as pаypal.com)"]);
 });
 
 test("leaves real brand domains, the organisation itself and free mail alone", () => {

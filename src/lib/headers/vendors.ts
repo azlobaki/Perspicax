@@ -1,5 +1,5 @@
 import type { HeaderField } from "../email.ts";
-import type { Finding } from "../finding.ts";
+import { noted, type Finding } from "../finding.ts";
 import type { Text } from "../i18n/text.ts";
 import { getHeader } from "../mime/headers.ts";
 
@@ -229,7 +229,9 @@ export function vendorFindings(verdicts: readonly VendorVerdict[]): Finding[] {
     const id = `vendor.${v.vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     const evidence = v.fields
       .filter((f) => f.flagged)
-      .map((f) => `${f.key}: ${f.value}${f.meaning ? ` (${f.meaning.en})` : ""}`);
+      .map((f) => (f.meaning
+        ? noted(`${f.key}: ${f.value} (${f.meaning.en})`, `${f.key}: ${f.value} (${f.meaning.fr})`)
+        : `${f.key}: ${f.value}`));
     const base = { id, category: "vendor" as const, evidence };
     switch (v.verdict) {
       case "phishing":

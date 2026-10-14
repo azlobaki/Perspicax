@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { BRANDS } from "../data/brands.ts";
 import type { ParsedEmail } from "../email.ts";
+import { evidenceIn } from "../finding.ts";
 import { parseEmail } from "../mime/parse.ts";
 import { parseTestHtml as parse } from "../testing/dom.ts";
 import type { Reference } from "../urls/lookalike.ts";
@@ -52,7 +53,7 @@ test("catches the PayPal lookalike's tricks", () => {
     "url.shortener",
   ]);
   const lookalike = report.findings.find((f) => f.id === "url.lookalike");
-  assert.deepEqual(lookalike?.evidence, ["pаypal.com (xn--pypal-4ve.com) imitates paypal.com", "paypa1.com imitates paypal.com"]);
+  assert.deepEqual(lookalike?.evidence.map((e) => evidenceIn(e, "en")), ["pаypal.com (xn--pypal-4ve.com) imitates paypal.com", "paypa1.com imitates paypal.com"]);
   assert.equal(report.forms[0].hasPassword, true);
 });
 
@@ -104,7 +105,7 @@ test("analyses links, QR codes and forms found in attachments", () => {
   assert.equal(report.forms[0].attachment, "login.html");
   const password = report.findings.find((f) => f.id === "html.password-form");
   assert.equal(password?.title.en, "Password form in an attachment");
-  assert.deepEqual(password?.evidence, ["POST https://evil.example/collect — p (in login.html)"]);
+  assert.deepEqual(password?.evidence.map((e) => evidenceIn(e, "en")), ["POST https://evil.example/collect — p (in login.html)"]);
   assert.deepEqual(report.findings.map((f) => f.id), [
     "link.deceptive",
     "url.lookalike",
