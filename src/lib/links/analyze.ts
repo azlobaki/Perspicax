@@ -8,6 +8,18 @@ import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts"
 import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
 
+/** The extractor's reasons are English phrases or CSS declarations; the declarations read the same in both languages. */
+const HIDDEN_FR: Record<string, string> = {
+  "hidden attribute": "attribut hidden",
+  "same colour as background": "même couleur que le fond",
+  "zero size": "taille nulle",
+  "off-screen": "hors écran",
+};
+
+function hiddenText(reason: string | null): Text | null {
+  return reason === null ? null : { en: reason, fr: HIDDEN_FR[reason] ?? reason };
+}
+
 export type LinkOrigin = HtmlOrigin | "text" | "file" | "qr";
 
 export type Link = {
@@ -16,7 +28,7 @@ export type Link = {
   attachment: string | null;
   origin: LinkOrigin;
   text: string | null;
-  hidden: string | null;
+  hidden: Text | null;
   url: InspectedUrl;
   /** Domain the link text displays, when it is not where the link goes. */
   shownHost: string | null;
@@ -88,7 +100,7 @@ export function analyzeLinks(
       const url = inspectUrl(item.raw, { base: html.base, references: context.references });
       links.push({
         source: attachment === null ? "html" : "attachment", attachment, origin: item.origin, text: item.text,
-        hidden: item.hidden, url, shownHost: shownHost(item, url), tracking: tracking(item, url),
+        hidden: hiddenText(item.hidden), url, shownHost: shownHost(item, url), tracking: tracking(item, url),
       });
     }
   };
@@ -218,7 +230,7 @@ function linkFindings(
         en: "Links the reader cannot see are there for filters and crawlers, not for people.",
         fr: "Les liens que le lecteur ne voit pas sont destinés aux filtres et aux robots d’indexation, pas aux personnes.",
       },
-      evidence: unique(hidden.map((l) => `${destination(l)} (${l.hidden})`)), weight: 6,
+      evidence: unique(hidden.map((l) => `${destination(l)} (${l.hidden?.en})`)), weight: 6,
     });
   }
 

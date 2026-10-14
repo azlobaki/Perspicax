@@ -150,7 +150,7 @@ function Sender({ sender }: { sender: SenderInfo }) {
 function hopFlags(hop: Hop, t: Messages): string[] {
   const flags: string[] = [];
   if (hop.heloMismatch) flags.push(hop.rdns ? "HELO ≠ rDNS" : t.headers.heloNoRdns);
-  if (hop.ipScope && hop.ipScope !== "public") flags.push(hop.ipScope);
+  if (hop.ipScope && hop.ipScope !== "public") flags.push(t.headers.ipScope[hop.ipScope]);
   if (hop.delay !== null && hop.delay < -300) flags.push(t.headers.clockSkew);
   return flags;
 }

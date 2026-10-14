@@ -93,7 +93,7 @@ export function reportMarkdown(input: ReportInput): string {
     const notes = [
       link.shownHost ? `shows ${safe(link.shownHost)}` : null,
       ...link.url.flags.map((f) => (f === "lookalike" ? `lookalike of ${safe(link.url.lookalikeOf ?? "")}` : f)),
-      link.hidden ? `hidden (${link.hidden})` : null,
+      link.hidden ? `hidden (${link.hidden.en})` : null,
       link.attachment ? `in ${link.attachment}` : null,
     ].filter(Boolean);
     out.push(`- ${code(safe(link.url.final ?? link.url.raw))} — ${notes.join(", ")}`);
@@ -113,7 +113,7 @@ export function reportMarkdown(input: ReportInput): string {
     const list = report.iocs.filter((ioc) => ioc.type === type);
     if (list.length === 0) continue;
     out.push(`### ${IOC_HEADING[type]}`, "");
-    for (const ioc of list) out.push(`- ${code(input.defang ? defang(ioc.type, ioc.value) : ioc.value)} — ${ioc.sources.join(", ")}`);
+    for (const ioc of list) out.push(`- ${code(input.defang ? defang(ioc.type, ioc.value) : ioc.value)} — ${ioc.sources.map((s) => s.en).join(", ")}`);
     out.push("");
   }
 

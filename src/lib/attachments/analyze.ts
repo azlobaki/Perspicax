@@ -45,7 +45,7 @@ export type AttachmentReport = {
   hashes: Hashes;
   flags: AttachmentFlag[];
   /** What exactly triggered a flag, when there is more to say than the flag itself. */
-  details: Partial<Record<AttachmentFlag, string>>;
+  details: Partial<Record<AttachmentFlag, Text>>;
   entries: ArchiveEntry[] | null;
   /** Links found inside: PDF actions, Office external targets. */
   urls: string[];
@@ -71,6 +71,32 @@ const MAX_TEXT = 5_000_000;
 const MAX_IMAGE = 10_000_000;
 const MAX_IMAGES = 20;
 
+/** Engine phrases that reach the screen; anything else (names, URLs, paths) is data and reads the same. */
+const PHRASE_FR: Record<string, string> = {
+  JavaScript: "JavaScript",
+  "runs an action when opened": "exécute une action à l’ouverture",
+  "automatic actions": "actions automatiques",
+  "launches a program": "lance un programme",
+  "embedded file": "fichier intégré",
+  "submits a form": "envoie un formulaire",
+  "XFA form": "formulaire XFA",
+  "atob() decodes an embedded payload": "atob() décode une charge utile intégrée",
+  "embeds a file as a data: URL": "intègre un fichier sous forme d’URL data:",
+  "carries a long base64 blob": "contient un long bloc base64",
+  "builds a file in the browser (Blob)": "construit un fichier dans le navigateur (Blob)",
+  "gives the file a local URL": "donne au fichier une URL locale",
+  "saves it without a download prompt": "l’enregistre sans demande de téléchargement",
+  "triggers a download": "déclenche un téléchargement",
+  "clicks a link by script": "clique sur un lien par script",
+};
+
+function joinText(phrases: string[], separator: string): Text {
+  return {
+    en: phrases.join(separator),
+    fr: phrases.map((p) => PHRASE_FR[p] ?? p).join(separator),
+  };
+}
+
 export async function analyzeAttachments(
   attachments: readonly Attachment[],
   options: { decodeImage?: ImageDecoder } = {},
@@ -80,10 +106,10 @@ export async function analyzeAttachments(
   for (const attachment of attachments) {
     const data = attachment.data;
     const flags: AttachmentFlag[] = [];
-    const details: Partial<Record<AttachmentFlag, string>> = {};
-    const flag = (name: AttachmentFlag, detail?: string) => {
+    const details: Partial<Record<AttachmentFlag, Text>> = {};
+    const flag = (name: AttachmentFlag, detail?: string | Text) => {
       if (!flags.includes(name)) flags.push(name);
-      if (detail) details[name] = detail;
+      if (detail) details[name] = typeof detail === "string" ? { en: detail, fr: detail } : detail;
     };
     let detected = detectType(data);
     let entries: ArchiveEntry[] | null = null;
@@ -124,19 +150,22 @@ export async function analyzeAttachments(
     }
     for (const trick of nameTricks(attachment.filename)) flag(trick);
     if (detected.extensions.length > 0 && ext !== "" && !detected.extensions.includes(ext)) {
-      flag("type-mismatch", `named .${ext}, actually ${detected.label.en}`);
+      flag("type-mismatch", {
+        en: `named .${ext}, actually ${detected.label.en}`,
+        fr: `nommé .${ext}, en réalité ${detected.label.fr}`,
+      });
     }
 
     if ((detected.kind === "html" || detected.kind === "svg" || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
       const text = decodeUtf8OrLegacy(data);
       if (detected.kind === "html") html = text;
       const found = smugglingIndicators(text);
-      if (isSmuggling(found)) flag("html-smuggling", [...found.payload, ...found.delivery].join("; "));
+      if (isSmuggling(found)) flag("html-smuggling", joinText([...found.payload, ...found.delivery], "; "));
     }
     if (detected.kind === "pdf") {
       const pdf = inspectPdf(data);
       urls.push(...pdf.urls);
-      if (pdf.active.length > 0) flag("pdf-active", pdf.active.join(", "));
+      if (pdf.active.length > 0) flag("pdf-active", joinText(pdf.active, ", "));
     }
     if (IMAGE_KINDS.has(detected.kind) && options.decodeImage && data.length <= MAX_IMAGE && imagesLeft > 0) {
       imagesLeft--;
@@ -273,7 +302,7 @@ export function attachmentFindings(reports: readonly AttachmentReport[]): Findin
     findings.push({
       id: `attachment.${rule.flag}`, category: "attachment", severity: rule.severity, title: rule.title,
       explanation: rule.explanation,
-      evidence: hits.map((r) => (r.details[rule.flag] ? `${r.visibleName} — ${r.details[rule.flag]}` : r.visibleName)),
+      evidence: hits.map((r) => (r.details[rule.flag] ? `${r.visibleName} — ${r.details[rule.flag]?.en}` : r.visibleName)),
       weight: rule.weight,
     });
   }

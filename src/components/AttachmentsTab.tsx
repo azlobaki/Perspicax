@@ -46,7 +46,7 @@ function AttachmentItem({ n, report }: { n: number; report: AttachmentReport }) 
             <li key={flag}>
               <span className={`${FLAG} dossier:italic`}>{t.attachments.flags[flag]}</span>
               {report.details[flag] && (
-                <span className={`${DATA} text-muted [overflow-wrap:anywhere]`}> — {report.details[flag]}</span>
+                <span className={`${DATA} text-muted [overflow-wrap:anywhere]`}> — {pick(report.details[flag]!)}</span>
               )}
             </li>
           ))}

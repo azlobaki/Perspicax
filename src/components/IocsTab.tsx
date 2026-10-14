@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useT } from "@/i18n/LocaleContext";
+import { usePick, useT } from "@/i18n/LocaleContext";
 import { defang } from "@/lib/ioc/defang";
 import { IOC_TYPES, type Ioc } from "@/lib/ioc/collect";
 import { pivotsFor, type PivotService } from "@/lib/pivots/pivots";
@@ -47,6 +47,7 @@ export default function IocsTab({ iocs, pivots, defangDefault }: { iocs: Ioc[]; 
 }
 
 function IocRow({ ioc, shown, pivots: services }: { ioc: Ioc; shown: string; pivots: PivotService[] }) {
+  const pick = usePick();
   const pivots = pivotsFor(ioc, services);
   return (
     <li className="grid gap-x-6 gap-y-1 border-b border-hairline py-2 lg:grid-cols-[minmax(0,1fr)_auto] console:border-b-0 console:py-0.5 dossier:border-dotted">
@@ -57,7 +58,7 @@ function IocRow({ ioc, shown, pivots: services }: { ioc: Ioc; shown: string; piv
           </span>
           <CopyButton text={shown} />
         </p>
-        <p className="text-xs text-muted">{ioc.sources.join(" · ")}</p>
+        <p className="text-xs text-muted">{ioc.sources.map(pick).join(" · ")}</p>
       </div>
       {pivots.length > 0 && (
         <div className="flex flex-wrap content-start gap-1.5 lg:justify-end">

@@ -30,8 +30,8 @@ test("collects the spoofed invoice's indicators with their provenance", async ()
   assert.deepEqual(of("ip"), ["185.234.72.19"]);
   assert.deepEqual(of("email"), ["facturation@rhone-energie.fr", "rhone.energie.paiement@outlook.fr", "bounce-7f3a@mta-relay.click"]);
   assert.deepEqual(of("sha256"), [createHash("sha256").update(email.attachments[0].data).digest("hex")]);
-  assert.deepEqual(report.iocs.find((i) => i.type === "url")?.sources, ["link in HTML body"]);
-  assert.deepEqual(report.iocs.find((i) => i.type === "ip")?.sources, ["Received (origin)"]);
+  assert.deepEqual(report.iocs.find((i) => i.type === "url")?.sources.map((s) => s.en), ["link in HTML body"]);
+  assert.deepEqual(report.iocs.find((i) => i.type === "ip")?.sources.map((s) => s.en), ["Received (origin)"]);
 });
 
 test("leaves recipients and mailing-service trackers out", async () => {

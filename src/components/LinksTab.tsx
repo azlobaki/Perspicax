@@ -2,6 +2,7 @@ import { usePick, useT } from "@/i18n/LocaleContext";
 import type { Link } from "@/lib/links/analyze";
 import { isClickable } from "@/lib/links/analyze";
 import type { Messages } from "@/i18n/messages";
+import type { Text } from "@/lib/i18n/text";
 import Breakable from "./Breakable";
 import { DATA, FLAG, LABEL, SECTION_TITLE } from "./ui";
 
@@ -10,7 +11,7 @@ const MAX_SHOWN = 300;
 
 type Badge = { text: string; flagged: boolean };
 
-function badges(link: Link, t: Messages): Badge[] {
+function badges(link: Link, t: Messages, pick: (text: Text) => string): Badge[] {
   const out: Badge[] = [];
   if (link.shownHost) out.push({ text: t.links.shows(link.shownHost), flagged: true });
   for (const flag of link.url.flags) {
@@ -19,14 +20,15 @@ function badges(link: Link, t: Messages): Badge[] {
       flagged: flag !== "punycode" && flag !== "opaque-wrapper",
     });
   }
-  if (link.hidden) out.push({ text: t.links.hidden(link.hidden), flagged: true });
+  if (link.hidden) out.push({ text: t.links.hidden(pick(link.hidden)), flagged: true });
   if (link.tracking) out.push({ text: link.tracking === "pixel" ? t.links.trackingPixel : t.links.mailingTracker, flagged: link.tracking === "pixel" });
   return out;
 }
 
 export default function LinksTab({ links }: { links: Link[] }) {
   const t = useT();
-  const numbered = links.map((link, i) => ({ link, n: i + 1, badges: badges(link, t) }));
+  const pick = usePick();
+  const numbered = links.map((link, i) => ({ link, n: i + 1, badges: badges(link, t, pick) }));
   const byConcern = (a: (typeof numbered)[number], b: (typeof numbered)[number]) =>
     Number(b.badges.some((x) => x.flagged)) - Number(a.badges.some((x) => x.flagged));
   const clickable = numbered.filter((x) => isClickable(x.link)).sort(byConcern);
