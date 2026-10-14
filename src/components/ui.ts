@@ -25,3 +25,10 @@ export const BUTTON_PRIMARY = `${BUTTON_BASE} border-ink bg-ink text-paper hover
 /** Compact secondary action: copy, pivot. */
 export const SMALL_BUTTON =
   "inline-block border border-hairline px-1.5 text-xs leading-5 text-muted hover:border-rule hover:text-ink focus-visible:outline-2 focus-visible:outline-signal console:text-[11px] dossier:font-data";
+
+/** The top bar, shared by every page. */
+export const HEADER =
+  "flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-rule px-4 py-2.5 sm:px-6 suisse:border-t-[6px] suisse:border-t-ink console:border-hairline console:bg-panel console:py-1.5 dossier:border-b-2";
+
+export const WORDMARK =
+  "font-display text-lg font-extrabold tracking-tight console:text-sm console:font-semibold console:lowercase console:tracking-normal console:text-signal-fg dossier:text-base dossier:font-semibold dossier:tracking-[0.08em] dossier:[font-variant:small-caps]";

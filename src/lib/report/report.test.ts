@@ -26,6 +26,7 @@ test("writes a defanged Markdown ticket report", async () => {
   assert.match(md, /^\| Facture_RE-4471\.pdf\.html \| HTML document \| 343 B \| `[0-9a-f]{64}` \| web-page, double-extension, html-smuggling \|$/m);
   assert.match(md, /^- `hxxps:\/\/t\[\.\]mta-relay\[\.\]click\/o\/9f3a2c1e\.gif` — image in HTML body$/m);
   assert.doesNotMatch(md, /https:\/\/rhone-energie\.fr\.secure-login/);
+  assert.match(md, /does not replace a qualified human analysis\./);
 });
 
 test("can leave indicators live", async () => {

@@ -3,7 +3,7 @@
 import { formatSize } from "@/lib/format";
 import type { Theme } from "@/lib/settings";
 import ThemeSwitch from "./ThemeSwitch";
-import { BUTTON, DATA, LABEL } from "./ui";
+import { BUTTON, DATA, HEADER, LABEL, WORDMARK } from "./ui";
 
 export type FileMeta = { name: string; size: number; parseMs: number };
 
@@ -23,8 +23,8 @@ export default function TopBar({
   onSettings: () => void;
 }) {
   return (
-    <header className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-rule px-4 py-2.5 sm:px-6 suisse:border-t-[6px] suisse:border-t-ink console:border-hairline console:bg-panel console:py-1.5 dossier:border-b-2">
-      <span className="font-display text-lg font-extrabold tracking-tight console:text-sm console:font-semibold console:lowercase console:tracking-normal console:text-signal-fg dossier:text-base dossier:font-semibold dossier:tracking-[0.08em] dossier:[font-variant:small-caps]">
+    <header className={HEADER}>
+      <span className={WORDMARK}>
         Perspicax
       </span>
       {file && (

@@ -34,7 +34,9 @@ function serve() {
     if (path.endsWith("/")) path += "index.html";
     let file = join(OUT, path);
     if (!file.startsWith(OUT)) return res.writeHead(403).end();
-    if (!existsSync(file) && existsSync(`${file}.html`)) file += ".html";
+    // Next exports /page as page.html, sometimes next to a page/ directory of its own.
+    const isFile = (f) => existsSync(f) && statSync(f).isFile();
+    if (!isFile(file) && isFile(`${file}.html`)) file += ".html";
     if (!existsSync(file) || !statSync(file).isFile()) return res.writeHead(404).end();
     res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
     res.end(readFileSync(file));
@@ -194,6 +196,13 @@ try {
   };
 
   mkdirSync(SHOTS, { recursive: true });
+
+  // A first visit that changes nothing must leave nothing in the browser.
+  await load(base);
+  await evaluate("new Promise((ok) => setTimeout(ok, 1500))");
+  const stored = await evaluate("localStorage.length");
+  if (stored !== 0) failures.push(`a first visit wrote ${stored} localStorage key(s)`);
+
   for (const theme of THEMES) {
     await loadWithSettings({ theme });
     const applied = await evaluate("document.documentElement.dataset.theme");
@@ -202,6 +211,12 @@ try {
     await evaluate(`document.getElementById("open-settings").click()`);
     await evaluate("new Promise((ok) => setTimeout(ok, 300))");
     await screenshot(`${theme}-settings.png`);
+    await load(`${base}mentions-legales`);
+    const legal = await evaluate("document.body.innerText");
+    for (const want of ["Vercel Inc.", "contact.azlobaki@pm.me", "ne remplace pas l'analyse d'une personne qualifiée"]) {
+      if (!legal.includes(want)) failures.push(`${theme}: legal notice misses "${want}"`);
+    }
+    await screenshot(`${theme}-legal.png`);
 
     for (const fixture of fixtures) {
       // A fixture may run under settings of its own (organisation domains…).
