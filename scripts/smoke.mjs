@@ -217,12 +217,18 @@ try {
     await evaluate(`document.getElementById("open-settings").click()`);
     await evaluate("new Promise((ok) => setTimeout(ok, 300))");
     await screenshot(`${theme}-settings.png`);
-    await load(`${base}mentions-legales`);
-    const legal = await evaluate("document.body.innerText");
-    for (const want of ["Vercel Inc.", "contact.azlobaki@pm.me", "ne remplace pas l'analyse d'une personne qualifiée"]) {
-      if (!legal.includes(want)) failures.push(`${theme}: legal notice misses "${want}"`);
+    for (const [locale, wants] of [
+      ["fr", ["Vercel Inc.", "contact.azlobaki@pm.me", "ne remplace pas l'analyse d'une personne qualifiée"]],
+      ["en", ["Vercel Inc.", "contact.azlobaki@pm.me", "the French text is the legally binding one"]],
+    ]) {
+      await loadWithSettings({ theme, locale });
+      await load(`${base}mentions-legales`);
+      const legal = await evaluate("document.body.innerText");
+      for (const want of wants) {
+        if (!legal.includes(want)) failures.push(`${theme}: ${locale} legal notice misses "${want}"`);
+      }
+      if (locale === "en") await screenshot(`${theme}-legal.png`);
     }
-    await screenshot(`${theme}-legal.png`);
 
     for (const fixture of fixtures) {
       // A fixture may run under settings of its own (organisation domains…).

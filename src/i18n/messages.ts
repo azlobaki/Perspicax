@@ -219,6 +219,9 @@ const en = {
     saveServices: "Save services",
     brokenPivots: "Every service needs a name, at least one type, and an http(s) template containing {value}, {raw} or {base64url}.",
   },
+  legal: {
+    title: "Legal notice and privacy — Perspicax",
+  },
   footer: {
     disclaimer: "Decision support only: verdicts are heuristics, they can be wrong either way, and they never replace a qualified human analysis.",
     offline: "Offline · the email never leaves this tab",
@@ -452,6 +455,9 @@ const fr: Messages = {
     restoreDefaults: "Rétablir les valeurs par défaut",
     saveServices: "Enregistrer les services",
     brokenPivots: "Chaque service doit avoir un nom, au moins un type et un modèle http(s) contenant {value}, {raw} ou {base64url}.",
+  },
+  legal: {
+    title: "Mentions légales et confidentialité — Perspicax",
   },
   footer: {
     disclaimer: "Aide à la décision uniquement\u00a0: les verdicts sont des heuristiques, ils peuvent se tromper dans un sens comme dans l’autre et ne remplacent jamais une analyse humaine qualifiée.",
