@@ -42,6 +42,20 @@ test("flags lookalike, homoglyph and plain internationalised domains", () => {
   assert.deepEqual(inspect("https://xn--mnchen-3ya.de/").flags, ["punycode"]);
 });
 
+test("flags Google's link shorteners and redirectors", () => {
+  for (const url of [
+    "https://share.google/PFv7ZS9hsF1Cw2QYJ",
+    "https://g.co/kgs/abc",
+    "https://goo.gle/3abc",
+    "https://forms.gle/xYz",
+    "https://maps.app.goo.gl/xYz",
+    "https://evil-app.page.link/xYz",
+  ]) {
+    assert.deepEqual(inspect(url).flags, ["shortener"], url);
+  }
+  assert.deepEqual(inspect("https://www.google.com/search?q=x").flags, []);
+});
+
 test("flags shorteners and opaque gateway rewrites", () => {
   assert.deepEqual(inspect("https://bit.ly/3xYz").flags, ["shortener"]);
   assert.deepEqual(inspect("https://protect-eu.mimecast.com/s/AbCdEf").flags, ["opaque-wrapper"]);
