@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Finding, FindingCategory } from "../finding.ts";
-import { scoreFindings } from "./score.ts";
+import { BAND_LABEL, scoreFindings } from "./score.ts";
 
 const finding = (id: string, category: FindingCategory, weight: number): Finding => ({
   id, category, severity: "medium", title: { en: id, fr: id }, explanation: { en: "", fr: "" }, evidence: [], weight,
@@ -39,4 +39,9 @@ test("decisive findings mean malicious indicators whatever the score", () => {
   assert.equal(score.score, 18);
   assert.equal(score.band, "malicious");
   assert.deepEqual(score.decisive, ["attachment.macros"]);
+});
+
+test("labels every band in both languages", () => {
+  assert.deepEqual(BAND_LABEL["likely-phishing"], { en: "Likely phishing", fr: "Hameçonnage probable" });
+  assert.deepEqual(BAND_LABEL.clean, { en: "Clean", fr: "Sain" });
 });

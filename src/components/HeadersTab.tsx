@@ -1,3 +1,4 @@
+import { usePick } from "@/i18n/LocaleContext";
 import type { DkimCheck } from "@/lib/dkim/bodyhash";
 import type { HeaderField } from "@/lib/email";
 import { formatDelay, formatTime } from "@/lib/format";
@@ -39,6 +40,7 @@ export default function HeadersTab({ report, headers, dkim }: { report: HeaderRe
 }
 
 function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }) {
+  const pick = usePick();
   return (
     <section
       aria-labelledby="auth-title"
@@ -50,7 +52,7 @@ function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }
           <span className="normal-case tracking-normal dossier:[font-variant:normal]">
             {" "}
             · recorded by <span className={DATA}>{auth.recordedBy}</span>
-            {auth.source && AUTH_SOURCE_NOTE[auth.source] && <> · {AUTH_SOURCE_NOTE[auth.source]}</>}
+            {auth.source && AUTH_SOURCE_NOTE[auth.source] && <> · {pick(AUTH_SOURCE_NOTE[auth.source]!)}</>}
           </span>
         )}
       </h2>
@@ -231,6 +233,7 @@ function HopItem({ hop }: { hop: Hop }) {
 }
 
 function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
+  const pick = usePick();
   return (
     <section
       aria-labelledby="vendors-title"
@@ -258,7 +261,7 @@ function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
                   <dt className={`${DATA} ${field.flagged ? FLAG : ""}`}>
                     {field.key}: {field.value}
                   </dt>
-                  {field.meaning && <dd className="text-xs text-muted">{field.meaning}</dd>}
+                  {field.meaning && <dd className="text-xs text-muted">{pick(field.meaning)}</dd>}
                 </div>
               ))}
             </dl>

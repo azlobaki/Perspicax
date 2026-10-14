@@ -17,11 +17,12 @@ test("decodes Microsoft's anti-spam report", () => {
   assert.equal(ms.vendor, "Microsoft 365");
   assert.equal(ms.verdict, "phishing");
   const field = (key: string) => ms.fields.find((f) => f.key === key);
-  assert.deepEqual(field("CAT"), { key: "CAT", value: "PHSH", meaning: "Phishing", flagged: true });
-  assert.deepEqual(field("SFV"), { key: "SFV", value: "SPM", meaning: "Spam", flagged: true });
+  assert.deepEqual(field("CAT"), { key: "CAT", value: "PHSH", meaning: { en: "Phishing", fr: "Hameçonnage" }, flagged: true });
+  assert.deepEqual(field("SFV"), { key: "SFV", value: "SPM", meaning: { en: "Spam", fr: "Spam" }, flagged: true });
   assert.equal(field("SCL")?.flagged, true);
   assert.equal(field("BCL")?.flagged, false);
-  assert.equal(field("PTR")?.meaning, "No reverse DNS");
+  assert.equal(field("PTR")?.meaning?.en, "No reverse DNS");
+  assert.equal(field("PTR")?.meaning?.fr, "Pas de DNS inverse");
   assert.equal(field("CTRY")?.value, "NL");
   assert.equal(field("SRV"), undefined);
 });

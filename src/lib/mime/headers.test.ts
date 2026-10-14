@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { Text } from "../i18n/text.ts";
 import { bytesToBinary } from "./bytes.ts";
 import { getHeader, getHeaders, parseHeaderBlock, splitHeaderBody } from "./headers.ts";
 
@@ -33,7 +34,7 @@ test("reads raw UTF-8 header bytes (RFC 6532) and falls back to windows-1252", (
 });
 
 test("skips lines that are not headers and reports them", () => {
-  const warnings: string[] = [];
+  const warnings: Text[] = [];
   const fields = parseHeaderBlock(bin("From someone@example.com Tue Oct 13 07:14:02 2026\nSubject: ok"), warnings);
   assert.deepEqual(fields, [{ name: "Subject", value: "ok" }]);
   assert.equal(warnings.length, 1);

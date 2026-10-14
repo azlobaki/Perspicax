@@ -1,4 +1,5 @@
 import type { MimePart, ParsedEmail } from "../email.ts";
+import type { Text } from "../i18n/text.ts";
 import { binaryToBytes, bytesToBinary, decodeBase64, decodeQuotedPrintable } from "./bytes.ts";
 import { decodeText, decodeUtf8OrLegacy } from "./charset.ts";
 import { getHeader, parseHeaderBlock, splitHeaderBody } from "./headers.ts";
@@ -19,7 +20,7 @@ const EXTENSIONS: Record<string, string> = {
 
 /** Parses a complete RFC 5322 / MIME message. Never throws on malformed input. */
 export function parseEmail(bytes: Uint8Array): ParsedEmail {
-  const warnings: string[] = [];
+  const warnings: Text[] = [];
   const binary = bytesToBinary(bytes);
   const root = parsePart(binary, 0, warnings);
   const email: ParsedEmail = {
@@ -39,7 +40,7 @@ export function parseEmail(bytes: Uint8Array): ParsedEmail {
 /** "Paste headers" mode: the header block only; anything after a blank line is ignored. */
 export function parseHeadersOnly(text: string): ParsedEmail {
   const trimmed = text.replace(/^(?:[ \t]*\r?\n)+/, "");
-  const warnings: string[] = [];
+  const warnings: Text[] = [];
   const { header } = splitHeaderBody(bytesToBinary(new TextEncoder().encode(trimmed)));
   return {
     source: "headers",
@@ -53,7 +54,7 @@ export function parseHeadersOnly(text: string): ParsedEmail {
   };
 }
 
-function parsePart(binary: string, depth: number, warnings: string[]): MimePart {
+function parsePart(binary: string, depth: number, warnings: Text[]): MimePart {
   const { header, body } = splitHeaderBody(binary);
   const headers = parseHeaderBlock(header, warnings);
   const type = parseStructured(getHeader(headers, "content-type") ?? "text/plain");
@@ -82,8 +83,14 @@ function parsePart(binary: string, depth: number, warnings: string[]): MimePart 
     }
     warnings.push(
       depth >= MAX_DEPTH
-        ? "Multipart nesting too deep; inner parts were not parsed."
-        : `A ${contentType} part has no boundary; it was read as a single body.`,
+        ? {
+            en: "Multipart nesting too deep; inner parts were not parsed.",
+            fr: "Imbrication multipart trop profonde : les parties internes n’ont pas été analysées.",
+          }
+        : {
+            en: `A ${contentType} part has no boundary; it was read as a single body.`,
+            fr: `Une partie ${contentType} n’a pas de séparateur : elle a été lue comme un corps unique.`,
+          },
     );
   }
 
@@ -107,7 +114,7 @@ function decodeTransfer(body: string, encoding: string | null): Uint8Array {
  * break before a delimiter belongs to the delimiter; preamble and epilogue
  * are dropped; a missing close delimiter is tolerated.
  */
-export function splitMultipart(body: string, boundary: string, warnings: string[]): string[] {
+export function splitMultipart(body: string, boundary: string, warnings: Text[]): string[] {
   const delimiter = `--${boundary}`;
   const parts: string[] = [];
   let partStart = -1;
@@ -132,7 +139,10 @@ export function splitMultipart(body: string, boundary: string, warnings: string[
   }
   if (partStart !== -1) {
     parts.push(body.slice(partStart));
-    warnings.push("A multipart body ends without its closing boundary.");
+    warnings.push({
+      en: "A multipart body ends without its closing boundary.",
+      fr: "Un corps multipart se termine sans son séparateur de fin.",
+    });
   }
   return parts;
 }

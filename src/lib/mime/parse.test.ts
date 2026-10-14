@@ -71,7 +71,7 @@ test("tolerates a missing closing boundary", () => {
   );
   assert.equal(email.text, "body");
   assert.equal(email.attachments[0].filename, "note.txt");
-  assert.match(email.warnings.join(" "), /closing boundary/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /closing boundary/);
 });
 
 test("names unnamed extra parts instead of dropping them", () => {
@@ -88,7 +88,7 @@ test("survives absurd multipart nesting", () => {
   for (let i = 0; i < 40; i++) {
     body = `Content-Type: multipart/mixed; boundary="b${i}"\n\n--b${i}\n${body}\n--b${i}--`;
   }
-  assert.match(eml(body).warnings.join(" "), /too deep/);
+  assert.match(eml(body).warnings.map((w) => w.en).join(" "), /too deep/);
 });
 
 test("reads the spoofed-invoice fixture", () => {

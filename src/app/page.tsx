@@ -12,8 +12,17 @@ import { LocaleProvider } from "@/i18n/LocaleContext";
 import { useSettings } from "@/hooks/useSettings";
 import { analyzeEmail, type EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
+import { TextError } from "@/lib/i18n/error";
+import type { Text } from "@/lib/i18n/text";
 import { parseEmail, parseHeadersOnly } from "@/lib/mime/parse";
 import { parseMsg } from "@/lib/msg/parse";
+
+/** A failure in both languages; English keeps an ordinary error's own message. */
+function failure(en: string, fr: string, err: unknown): Text {
+  const plain = err instanceof Error ? err.message : String(err);
+  const reason: Text = err instanceof TextError ? err.text : { en: plain, fr: plain };
+  return { en: `${en}${reason.en}`, fr: `${fr}${reason.fr}` };
+}
 
 /** The current email. It lives here, in memory, and nowhere else. */
 type Loaded = { id: number; email: ParsedEmail; file: FileMeta };
@@ -25,7 +34,7 @@ export default function Home() {
   const { settings, setSettings, loaded: settingsLoaded, locale, setLocale } = useSettings();
   const [current, setCurrent] = useState<Loaded | null>(null);
   const [result, setResult] = useState<{ id: number; report: EmailReport } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Text | null>(null);
   const [dragging, setDragging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const nextId = useRef(0);
@@ -40,7 +49,7 @@ export default function Home() {
       setError(null);
       setShowSettings(false);
     } catch (err) {
-      setError(`Could not read this email: ${err instanceof Error ? err.message : String(err)}`);
+      setError(failure("Could not read this email: ", "Impossible de lire cet e-mail : ", err));
     }
   }, []);
 
@@ -58,7 +67,7 @@ export default function Home() {
         if (!cancelled) setResult({ id: current.id, report });
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(`Analysis failed: ${err instanceof Error ? err.message : String(err)}`);
+        if (!cancelled) setError(failure("Analysis failed: ", "Échec de l’analyse : ", err));
       });
     return () => {
       cancelled = true;
@@ -126,7 +135,7 @@ export default function Home() {
     main = (
       <main className="flex-1 px-4 py-8 sm:px-6">
         <p role={error ? "alert" : "status"} className={error ? "font-semibold text-signal-fg" : "text-muted"}>
-          {error ?? "Analysing…"}
+          {error ? error[locale] : "Analysing…"}
         </p>
       </main>
     );
@@ -134,7 +143,7 @@ export default function Home() {
     main = (
       <EntryPanel
         dragging={dragging}
-        error={error}
+        error={error ? error[locale] : null}
         onFile={(file) => void openFile(file)}
         onHeaders={(text) => load(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
       />

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import * as CFB from "cfb";
+import { TextError } from "../i18n/error.ts";
 import { decodeEncodedWords } from "../mime/encoded-words.ts";
 import { getHeader } from "../mime/headers.ts";
 import { compressRtf } from "../testing/rtf.ts";
@@ -53,7 +54,7 @@ test("rebuilds basic headers when there are no transport headers", () => {
     { name: "To", value: "Jean Martin" },
     { name: "Subject", value: "Brouillon" },
   ]);
-  assert.match(email.warnings.join(" "), /No transport headers/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /No transport headers/);
 });
 
 const RTF_FROM_HTML =
@@ -75,7 +76,7 @@ test("says when the compressed RTF was changed after Outlook wrote it", () => {
   rtf[12] ^= 0xff;
   const email = parseMsg(build({ "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"), "/__substg1.0_10090102": rtf }));
   assert.match(email.html ?? "", /<a href=/);
-  assert.match(email.warnings.join(" "), /checksum/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /checksum/);
 });
 
 test("needs no HTML when the RTF body was plain text", () => {
@@ -96,8 +97,8 @@ test("says what it cannot read", () => {
     "/__attach_version1.0_#00000000/__substg1.0_3701000D/__properties_version1.0": new Uint8Array(32),
   }));
   assert.equal(email.html, null);
-  assert.match(email.warnings.join(" "), /written as RTF/);
-  assert.match(email.warnings.join(" "), /forwarded\.msg/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /written as RTF/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /forwarded\.msg/);
   assert.deepEqual(email.attachments, []);
 });
 
@@ -111,5 +112,21 @@ test("says when the compressed RTF is unreadable", () => {
     "/__substg1.0_10090102": new Uint8Array(16),
   }));
   assert.equal(email.html, null);
-  assert.match(email.warnings.join(" "), /could not be read/);
+  assert.match(email.warnings.map((w) => w.en).join(" "), /could not be read/);
+});
+
+test("warns in both languages", () => {
+  const email = parseMsg(build({
+    "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"),
+    "/__substg1.0_10090102": new Uint8Array(16),
+  }));
+  assert.match(email.warnings[0].en, /could not be read/);
+  assert.match(email.warnings[0].fr, /n’a pas pu être lu/);
+});
+
+test("refuses non-Outlook files with a message in both languages", () => {
+  assert.throws(
+    () => parseMsg(new TextEncoder().encode("not a msg")),
+    (err: unknown) => err instanceof TextError && /Outlook/.test(err.text.fr) && err.message === err.text.en,
+  );
 });

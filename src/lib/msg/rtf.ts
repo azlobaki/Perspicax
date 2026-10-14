@@ -1,3 +1,4 @@
+import { TextError } from "../i18n/error.ts";
 import { decodeText } from "../mime/charset.ts";
 
 /**
@@ -37,14 +38,14 @@ export function rtfCrc32(bytes: Uint8Array): number {
  * fatal: a body edited in place (by a redaction tool, say) still decompresses.
  */
 export function decompressRtf(bytes: Uint8Array): { data: Uint8Array; crcOk: boolean } {
-  if (bytes.length < 16) throw new Error("Compressed RTF is too short.");
+  if (bytes.length < 16) throw new TextError({ en: "Compressed RTF is too short.", fr: "Le RTF compressé est trop court." });
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const rawSize = view.getUint32(4, true);
   const type = view.getUint32(8, true);
   const crc = view.getUint32(12, true);
   const end = Math.min(bytes.length, 4 + view.getUint32(0, true));
   if (type === UNCOMPRESSED) return { data: bytes.slice(16, 16 + rawSize), crcOk: true };
-  if (type !== COMPRESSED) throw new Error("This is not compressed RTF.");
+  if (type !== COMPRESSED) throw new TextError({ en: "This is not compressed RTF.", fr: "Ce n’est pas du RTF compressé." });
 
   const input = bytes.subarray(16, end);
   const dict = new Uint8Array(4096);

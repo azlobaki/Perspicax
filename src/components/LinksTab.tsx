@@ -1,3 +1,4 @@
+import { usePick } from "@/i18n/LocaleContext";
 import type { Link, LinkOrigin } from "@/lib/links/analyze";
 import { isClickable } from "@/lib/links/analyze";
 import type { UrlFlag } from "@/lib/urls/inspect";
@@ -100,6 +101,7 @@ function LinkList({ id, title, rows, empty, note }: {
 }
 
 function LinkRow({ link, n, badges: list }: { link: Link; n: number; badges: Badge[] }) {
+  const pick = usePick();
   const destination = link.url.final ?? link.url.raw;
   const shown = destination.length > MAX_SHOWN ? `${destination.slice(0, MAX_SHOWN)}…` : destination;
   return (
@@ -116,7 +118,7 @@ function LinkRow({ link, n, badges: list }: { link: Link; n: number; badges: Bad
           <p className={`${DATA} text-muted`}>reads as {link.url.displayHost}</p>
         )}
         {link.url.wrappers.length > 0 && (
-          <p className="text-xs text-muted">via {link.url.wrappers.map((w) => w.service).join(" → ")}</p>
+          <p className="text-xs text-muted">via {link.url.wrappers.map((w) => pick(w.service)).join(" → ")}</p>
         )}
         {list.length > 0 && (
           <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs">

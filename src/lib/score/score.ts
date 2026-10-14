@@ -1,12 +1,13 @@
 import type { Finding, FindingCategory } from "../finding.ts";
+import type { Text } from "../i18n/text.ts";
 
 export type Band = "clean" | "suspicious" | "likely-phishing" | "malicious";
 
-export const BAND_LABEL: Record<Band, string> = {
-  clean: "Clean",
-  suspicious: "Suspicious",
-  "likely-phishing": "Likely phishing",
-  malicious: "Malicious indicators",
+export const BAND_LABEL: Record<Band, Text> = {
+  clean: { en: "Clean", fr: "Sain" },
+  suspicious: { en: "Suspicious", fr: "Suspect" },
+  "likely-phishing": { en: "Likely phishing", fr: "Hameçonnage probable" },
+  malicious: { en: "Malicious indicators", fr: "Indicateurs malveillants" },
 };
 
 /** Lower bound of each band on the 0–100 scale. */

@@ -16,7 +16,7 @@ export function reportJson(input: Omit<ReportInput, "defang">): string {
       verdict: {
         score: report.score.score,
         band: report.score.band,
-        label: BAND_LABEL[report.score.band],
+        label: BAND_LABEL[report.score.band].en,
         categories: report.score.categories,
       },
       findings: report.findings,
@@ -51,7 +51,7 @@ export function reportJson(input: Omit<ReportInput, "defang">): string {
         qr: a.qr,
       })),
       iocs: report.iocs,
-      warnings: email.warnings,
+      warnings: email.warnings.map((w) => w.en),
     },
     null,
     2,

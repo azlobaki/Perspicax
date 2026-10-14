@@ -1,3 +1,5 @@
+import type { Text } from "./i18n/text.ts";
+
 /** One header line, unfolded. `value` is raw: RFC 2047 words are not decoded. */
 export type HeaderField = { name: string; value: string };
 
@@ -36,5 +38,5 @@ export type ParsedEmail = {
   raw: string;
   /** Body bytes exactly as in the file, after the header block: what DKIM signed. Null for .msg and pasted headers. */
   rawBody: Uint8Array | null;
-  warnings: string[];
+  warnings: Text[];
 };

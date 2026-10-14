@@ -124,7 +124,7 @@ export async function analyzeAttachments(
     }
     for (const trick of nameTricks(attachment.filename)) flag(trick);
     if (detected.extensions.length > 0 && ext !== "" && !detected.extensions.includes(ext)) {
-      flag("type-mismatch", `named .${ext}, actually ${detected.label}`);
+      flag("type-mismatch", `named .${ext}, actually ${detected.label.en}`);
     }
 
     if ((detected.kind === "html" || detected.kind === "svg" || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
@@ -213,7 +213,7 @@ const RULES: Rule[] = [
   { flag: "rtlo", severity: "high", weight: 15, title: { en: "File name uses a direction override", fr: "Nom de fichier avec inversion du sens d’écriture" },
     explanation: {
       en: "A right-to-left override reverses the end of the name on screen, so “fdp.exe” displays as “exe.pdf”.",
-      fr: "Un caractère de droite à gauche inverse la fin du nom à l’écran\u00a0: « fdp.exe » s’affiche « exe.pdf ».",
+      fr: "Un caractère de droite à gauche inverse la fin du nom à l’écran\u00a0: « fdp.exe » s’affiche « exe.pdf ».",
     } },
   { flag: "qr-code", severity: "high", weight: 15, title: { en: "QR code in an image", fr: "Code QR dans une image" },
     explanation: {

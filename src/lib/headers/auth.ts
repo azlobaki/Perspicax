@@ -1,5 +1,6 @@
 import type { HeaderField } from "../email.ts";
 import type { Finding } from "../finding.ts";
+import type { Text } from "../i18n/text.ts";
 import { getHeader, getHeaders } from "../mime/headers.ts";
 import { sameOrg } from "../net/domain.ts";
 import type { Hop } from "./received.ts";
@@ -151,11 +152,14 @@ export function authSummary(headers: readonly HeaderField[], hops: readonly Hop[
 }
 
 /** Where the results came from, when it was not the receiving server's Authentication-Results. */
-export const AUTH_SOURCE_NOTE: Record<NonNullable<AuthSummary["source"]>, string | null> = {
+export const AUTH_SOURCE_NOTE: Record<NonNullable<AuthSummary["source"]>, Text | null> = {
   "Authentication-Results": null,
-  Hornetsecurity: "from the X-antispameurope headers",
-  "Received-SPF": "from Received-SPF only",
-  "ARC-Authentication-Results": "from an ARC copy, written upstream: a pass proves little",
+  Hornetsecurity: { en: "from the X-antispameurope headers", fr: "d’après les en-têtes X-antispameurope" },
+  "Received-SPF": { en: "from Received-SPF only", fr: "d’après Received-SPF seul" },
+  "ARC-Authentication-Results": {
+    en: "from an ARC copy, written upstream: a pass proves little",
+    fr: "d’après une copie ARC, écrite en amont : un résultat « pass » prouve peu de chose",
+  },
 };
 
 const VERDICT = /^(pass|fail|softfail|neutral|none|temperror|permerror)$/;

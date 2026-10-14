@@ -1,4 +1,6 @@
 import * as CFB from "cfb";
+import { TextError } from "../i18n/error.ts";
+import type { Text } from "../i18n/text.ts";
 import type { Attachment, HeaderField, ParsedEmail } from "../email.ts";
 import { bytesToBinary } from "../mime/bytes.ts";
 import { decodeText, decodeUtf8OrLegacy } from "../mime/charset.ts";
@@ -28,18 +30,29 @@ const ATTACH_CONTENT_ID = "3712";
 
 const ATTACHMENT_STORAGE = /^(__attach_version1\.0_#[0-9A-Fa-f]{8}\/)/;
 
-function htmlFromCompressedRtf(bytes: Uint8Array, warnings: string[]): string | null {
+const NOT_MSG: Text = { en: "This is not an Outlook .msg file.", fr: "Ce n’est pas un fichier .msg d’Outlook." };
+
+function htmlFromCompressedRtf(bytes: Uint8Array, warnings: Text[]): string | null {
   let rtf: string;
   try {
     const { data, crcOk } = decompressRtf(bytes);
-    if (!crcOk) warnings.push("The formatted body's checksum does not match: it was modified after Outlook stored it.");
+    if (!crcOk) warnings.push({
+      en: "The formatted body's checksum does not match: it was modified after Outlook stored it.",
+      fr: "La somme de contrôle du corps mis en forme ne correspond pas : il a été modifié après son enregistrement par Outlook.",
+    });
     rtf = bytesToBinary(data);
   } catch {
-    warnings.push("The formatted body is stored as compressed RTF that could not be read; its links are not analysed.");
+    warnings.push({
+      en: "The formatted body is stored as compressed RTF that could not be read; its links are not analysed.",
+      fr: "Le corps mis en forme est stocké en RTF compressé qui n’a pas pu être lu : ses liens ne sont pas analysés.",
+    });
     return null;
   }
   if (rtfOrigin(rtf) === "rtf") {
-    warnings.push("The formatted body was written as RTF, not HTML; only its plain-text version is analysed.");
+    warnings.push({
+      en: "The formatted body was written as RTF, not HTML; only its plain-text version is analysed.",
+      fr: "Le corps mis en forme a été écrit en RTF et non en HTML : seule sa version en texte brut est analysée.",
+    });
   }
   return htmlFromRtf(rtf);
 }
@@ -54,7 +67,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
   try {
     container = CFB.read(bytes, { type: "array" });
   } catch {
-    throw new Error("This is not an Outlook .msg file.");
+    throw new TextError(NOT_MSG);
   }
   const streams = new Map<string, Uint8Array>();
   container.FileIndex.forEach((entry, i) => {
@@ -63,7 +76,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     }
   });
   if (![...streams.keys()].some((path) => path.startsWith("__substg1.0_") || path === "__properties_version1.0")) {
-    throw new Error("This is not an Outlook .msg file.");
+    throw new TextError(NOT_MSG);
   }
 
   const text = (prefix: string, id: string): string | null => {
@@ -74,7 +87,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
   };
   const binary = (prefix: string, id: string) => streams.get(`${prefix}__substg1.0_${id}${BINARY}`) ?? null;
 
-  const warnings: string[] = [];
+  const warnings: Text[] = [];
   const transport = text("", TRANSPORT_HEADERS);
   let headers: HeaderField[];
   if (transport) {
@@ -88,7 +101,10 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     if (to) headers.push({ name: "To", value: to });
     const subject = text("", SUBJECT);
     if (subject) headers.push({ name: "Subject", value: subject });
-    warnings.push("No transport headers: this message was probably never sent over the internet, so only its sender, recipients and subject are known.");
+    warnings.push({
+      en: "No transport headers: this message was probably never sent over the internet, so only its sender, recipients and subject are known.",
+      fr: "Aucun en-tête de transport : ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
+    });
   }
 
   const htmlBytes = binary("", HTML);
@@ -106,7 +122,10 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     const data = binary(prefix, ATTACH_DATA);
     if (!data) {
       if ([...streams.keys()].some((path) => path.startsWith(`${prefix}__substg1.0_${ATTACH_DATA}${EMBEDDED}/`))) {
-        warnings.push(`The attached message “${filename}” is embedded in Outlook's own format and was not analysed.`);
+        warnings.push({
+          en: `The attached message “${filename}” is embedded in Outlook's own format and was not analysed.`,
+          fr: `Le message joint « ${filename} » est intégré dans le format propre à Outlook et n’a pas été analysé.`,
+        });
       }
       continue;
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePick } from "@/i18n/LocaleContext";
 import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { formatUtc } from "@/lib/format";
@@ -29,6 +30,7 @@ export default function ReportView({ email, report, file, defang, pivots }: {
   defang: boolean;
   pivots: PivotService[];
 }) {
+  const pick = usePick();
   const [tab, setTab] = useState<TabId>("headers");
   const headers = report.headers;
   const from = headers.sender.from;
@@ -68,7 +70,7 @@ export default function ReportView({ email, report, file, defang, pivots }: {
               </summary>
               <ul className="mt-1 list-inside list-disc">
                 {email.warnings.map((warning, i) => (
-                  <li key={i}>{warning}</li>
+                  <li key={i}>{pick(warning)}</li>
                 ))}
               </ul>
             </details>

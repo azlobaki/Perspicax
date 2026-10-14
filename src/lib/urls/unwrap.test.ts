@@ -9,7 +9,7 @@ test("unwraps Microsoft Safe Links", () => {
     "https://eur01.safelinks.protection.outlook.com/?url=https%3A%2F%2Frhone-energie.fr.secure-login.click%2Fauth%3Fu%3Dj.martin&data=05%7C02&reserved=0";
   const { final, wrappers, opaque } = unwrapUrl(href);
   assert.equal(final, "https://rhone-energie.fr.secure-login.click/auth?u=j.martin");
-  assert.deepEqual(wrappers, [{ service: "Microsoft Safe Links", url: href }]);
+  assert.deepEqual(wrappers, [{ service: { en: "Microsoft Safe Links", fr: "Microsoft Safe Links" }, url: href }]);
   assert.equal(opaque, null);
 });
 
@@ -42,7 +42,7 @@ test("follows generic redirect parameters and nested wrappers", () => {
       encodeURIComponent("https://www.google.com/url?q=https://evil.example/x"),
   );
   assert.equal(nested.final, "https://evil.example/x");
-  assert.deepEqual(nested.wrappers.map((w) => w.service), ["Microsoft Safe Links", "Google redirect"]);
+  assert.deepEqual(nested.wrappers.map((w) => w.service.en), ["Microsoft Safe Links", "Google redirect"]);
 });
 
 test("names gateways whose destination cannot be recovered offline", () => {

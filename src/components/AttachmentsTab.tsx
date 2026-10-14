@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { AttachmentFlag, AttachmentReport } from "@/lib/attachments/analyze";
+import { usePick } from "@/i18n/LocaleContext";
 import { formatSize } from "@/lib/format";
 import Breakable from "./Breakable";
 import CopyButton from "./CopyButton";
@@ -43,6 +44,7 @@ export default function AttachmentsTab({ attachments }: { attachments: Attachmen
 }
 
 function AttachmentItem({ n, report }: { n: number; report: AttachmentReport }) {
+  const pick = usePick();
   return (
     <li className="border-t-[3px] border-rule pt-3 console:border-t console:border-hairline console:pt-2 dossier:border-t">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -72,7 +74,7 @@ function AttachmentItem({ n, report }: { n: number; report: AttachmentReport }) 
         <dt className={LABEL}>Declared</dt>
         <dd className={DATA}>{report.declaredType}</dd>
         <dt className={LABEL}>Detected</dt>
-        <dd className={report.flags.includes("type-mismatch") ? FLAG : ""}>{report.detected.label}</dd>
+        <dd className={report.flags.includes("type-mismatch") ? FLAG : ""}>{pick(report.detected.label)}</dd>
         <dt className={LABEL}>Size</dt>
         <dd className="tabular-nums">{formatSize(report.size)}</dd>
         {HASHES.map(([key, label]) => (

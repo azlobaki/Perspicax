@@ -36,7 +36,7 @@ export function reportMarkdown(input: ReportInput): string {
   const out: string[] = [];
 
   out.push(`# Email analysis — ${headers.subject || "(no subject)"}`, "");
-  out.push(`**Verdict:** ${BAND_LABEL[report.score.band]} — score ${report.score.score}/100`);
+  out.push(`**Verdict:** ${BAND_LABEL[report.score.band].en} — score ${report.score.score}/100`);
   out.push(`**Analysed:** ${formatUtc(generatedAt)} with Perspicax, offline`);
   out.push(`**File:** ${file.name} (${formatSize(file.size)})`, "");
   out.push("| Field | Value |", "|---|---|");
@@ -61,7 +61,7 @@ export function reportMarkdown(input: ReportInput): string {
   if (headers.auth.entries.length === 0) {
     out.push("No authentication results.");
   } else {
-    const note = headers.auth.source ? AUTH_SOURCE_NOTE[headers.auth.source] : null;
+    const note = headers.auth.source ? (AUTH_SOURCE_NOTE[headers.auth.source]?.en ?? null) : null;
     out.push(`Recorded by ${code(safe(headers.auth.recordedBy ?? "unknown"))}${note ? `, ${note}` : ""}.`, "");
     out.push("| Method | Result | Details |", "|---|---|---|");
     for (const entry of headers.auth.entries) out.push(`| ${entry.method} | ${entry.result} | ${cell(safe(entryDetails(entry)))} |`);
@@ -103,7 +103,7 @@ export function reportMarkdown(input: ReportInput): string {
   if (report.attachments.length > 0) {
     out.push("## Attachments", "", "| Name | Detected type | Size | SHA-256 | Flags |", "|---|---|---|---|---|");
     for (const a of report.attachments) {
-      out.push(`| ${cell(a.visibleName)} | ${a.detected.label} | ${formatSize(a.size)} | ${code(a.hashes.sha256)} | ${a.flags.join(", ") || "—"} |`);
+      out.push(`| ${cell(a.visibleName)} | ${a.detected.label.en} | ${formatSize(a.size)} | ${code(a.hashes.sha256)} | ${a.flags.join(", ") || "—"} |`);
     }
     out.push("");
   }

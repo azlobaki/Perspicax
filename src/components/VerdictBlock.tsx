@@ -1,3 +1,4 @@
+import { usePick } from "@/i18n/LocaleContext";
 import { BAND_FLOORS, BAND_LABEL, type Band, type Score } from "@/lib/score/score";
 import { LABEL } from "./ui";
 
@@ -17,7 +18,8 @@ const strong = (band: Band) => band === "likely-phishing" || band === "malicious
  * the stamp instead.
  */
 export function VerdictBlock({ score }: { score: Score }) {
-  const label = BAND_LABEL[score.band];
+  const pick = usePick();
+  const label = pick(BAND_LABEL[score.band]);
   return (
     <section aria-label={`Verdict: ${label}, risk score ${score.score} out of 100`} className="dossier:hidden">
       <p className={`${LABEL} console:hidden`}>Risk score</p>
@@ -57,6 +59,7 @@ export function VerdictBlock({ score }: { score: Score }) {
 
 /** Dossier only: the verdict as a rubber stamp on the report. */
 export function VerdictStamp({ score }: { score: Score }) {
+  const pick = usePick();
   const red = score.band !== "clean";
   return (
     <div
@@ -64,7 +67,7 @@ export function VerdictStamp({ score }: { score: Score }) {
         red ? "border-signal text-signal-fg" : "border-ink text-ink"
       }`}
     >
-      <span className="block text-xl leading-tight tracking-[0.12em] uppercase">{BAND_LABEL[score.band]}</span>
+      <span className="block text-xl leading-tight tracking-[0.12em] uppercase">{pick(BAND_LABEL[score.band])}</span>
       <span className="text-xs tracking-[0.08em]">score {score.score} / 100</span>
     </div>
   );

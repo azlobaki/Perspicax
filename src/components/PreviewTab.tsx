@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale } from "@/i18n/LocaleContext";
 import type { ParsedEmail } from "@/lib/email";
 import { buildPreview } from "@/lib/html/preview";
 import { parseHtml } from "./parseHtml";
 import { DATA } from "./ui";
 
 export default function PreviewTab({ email }: { email: ParsedEmail }) {
+  const locale = useLocale();
   const srcDoc = useMemo(
-    () => (email.html ? buildPreview(email.html, parseHtml, email.attachments) : null),
-    [email],
+    () => (email.html ? buildPreview(email.html, parseHtml, email.attachments, locale) : null),
+    [email, locale],
   );
 
   if (srcDoc) {

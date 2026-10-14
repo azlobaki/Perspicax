@@ -21,7 +21,7 @@ test("finds the deceptive Safe Links link and the pixel in the spoofed invoice",
   const anchor = report.links.find((l) => l.origin === "a");
   assert.equal(anchor?.shownHost, "espace-client.rhone-energie.fr");
   assert.equal(anchor?.url.final, "https://rhone-energie.fr.secure-login.click/auth?u=j.martin");
-  assert.equal(anchor?.url.wrappers[0].service, "Microsoft Safe Links");
+  assert.equal(anchor?.url.wrappers[0].service.en, "Microsoft Safe Links");
   assert.equal(report.links.find((l) => l.origin === "img")?.tracking, "pixel");
   assert.deepEqual(
     report.links.filter((l) => l.source === "text").map((l) => l.url.final),
