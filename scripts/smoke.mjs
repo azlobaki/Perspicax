@@ -50,6 +50,8 @@ async function launch() {
     process.env.CHROME ?? "chromium",
     [
       "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+      // The app follows the browser's language: pin English so the run does not depend on the machine.
+      "--lang=en-US",
       // Ubuntu 24.04 CI runners forbid the unprivileged user namespaces Chrome's
       // sandbox needs; the pages loaded here are our own build and fixtures.
       ...(process.env.CI ? ["--no-sandbox"] : []),
@@ -132,6 +134,10 @@ try {
   const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
   const page = (method, params) => cdp.send(method, params, sessionId);
   for (const domain of ["Page", "Network", "Runtime", "DOM", "Log"]) await page(`${domain}.enable`);
+  // The app follows the browser's language: pin English (French passes are added separately).
+  await page("Emulation.setLocaleOverride", { locale: "en-US" });
+  const { userAgent } = await cdp.send("Browser.getVersion");
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "en-US,en" });
   await page("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: 1000, deviceScaleFactor: 1, mobile: false });
   cdp.on((msg) => {
     if (msg.method !== "Network.requestWillBeSent" || msg.sessionId !== sessionId) return;
