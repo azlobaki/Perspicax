@@ -4,6 +4,7 @@ import { test } from "node:test";
 import * as CFB from "cfb";
 import { decodeEncodedWords } from "../mime/encoded-words.ts";
 import { getHeader } from "../mime/headers.ts";
+import { compressRtf } from "../testing/rtf.ts";
 import { parseMsg } from "./parse.ts";
 
 const utf16 = (text: string) => {
@@ -55,19 +56,60 @@ test("rebuilds basic headers when there are no transport headers", () => {
   assert.match(email.warnings.join(" "), /No transport headers/);
 });
 
+const RTF_FROM_HTML =
+  "{\\rtf1\\ansi\\ansicpg1252\\fromhtml1 \\deff0{\\fonttbl{\\f0 Arial;}}" +
+  "{\\*\\htmltag64 <p>}Votre facture \\'e9tait {\\*\\htmltag84 <a href=\"https://pay.example-evil.top/\">}\\htmlrtf {\\field{\\*\\fldinst HYPERLINK x}{\\fldrslt\\htmlrtf0 ici\\htmlrtf }}\\htmlrtf0 {\\*\\htmltag92 </a>}{\\*\\htmltag72 </p>}}";
+
+test("reads the HTML body Outlook kept only as compressed RTF", () => {
+  const email = parseMsg(build({
+    "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"),
+    "/__substg1.0_1000001F": utf16("Votre facture était ici <https://pay.example-evil.top/>"),
+    "/__substg1.0_10090102": compressRtf(RTF_FROM_HTML),
+  }));
+  assert.equal(email.html, '<p>Votre facture était <a href="https://pay.example-evil.top/">ici</a></p>');
+  assert.deepEqual(email.warnings, []);
+});
+
+test("says when the compressed RTF was changed after Outlook wrote it", () => {
+  const rtf = compressRtf(RTF_FROM_HTML);
+  rtf[12] ^= 0xff;
+  const email = parseMsg(build({ "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"), "/__substg1.0_10090102": rtf }));
+  assert.match(email.html ?? "", /<a href=/);
+  assert.match(email.warnings.join(" "), /checksum/);
+});
+
+test("needs no HTML when the RTF body was plain text", () => {
+  const email = parseMsg(build({
+    "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"),
+    "/__substg1.0_1000001F": utf16("Bonjour"),
+    "/__substg1.0_10090102": compressRtf("{\\rtf1\\ansi\\fromtext \\deff0 Bonjour}"),
+  }));
+  assert.equal(email.html, null);
+  assert.deepEqual(email.warnings, []);
+});
+
 test("says what it cannot read", () => {
   const email = parseMsg(build({
     "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"),
-    "/__substg1.0_10090102": new Uint8Array(16),
+    "/__substg1.0_10090102": compressRtf("{\\rtf1\\ansi\\deff0 {\\field{\\*\\fldinst HYPERLINK x}}}"),
     "/__attach_version1.0_#00000000/__substg1.0_3707001F": utf16("forwarded.msg"),
     "/__attach_version1.0_#00000000/__substg1.0_3701000D/__properties_version1.0": new Uint8Array(32),
   }));
   assert.equal(email.html, null);
-  assert.match(email.warnings.join(" "), /compressed RTF/);
+  assert.match(email.warnings.join(" "), /written as RTF/);
   assert.match(email.warnings.join(" "), /forwarded\.msg/);
   assert.deepEqual(email.attachments, []);
 });
 
 test("refuses files that are not Outlook messages", () => {
   assert.throws(() => parseMsg(new TextEncoder().encode("From: x\n\nnot a msg")), /not an Outlook \.msg/);
+});
+
+test("says when the compressed RTF is unreadable", () => {
+  const email = parseMsg(build({
+    "/__substg1.0_007D001F": utf16("Subject: x\r\n\r\n"),
+    "/__substg1.0_10090102": new Uint8Array(16),
+  }));
+  assert.equal(email.html, null);
+  assert.match(email.warnings.join(" "), /could not be read/);
 });

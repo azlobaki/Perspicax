@@ -3,6 +3,7 @@ import type { Attachment, HeaderField, ParsedEmail } from "../email.ts";
 import { bytesToBinary } from "../mime/bytes.ts";
 import { decodeText, decodeUtf8OrLegacy } from "../mime/charset.ts";
 import { parseHeaderBlock } from "../mime/headers.ts";
+import { decompressRtf, htmlFromRtf, rtfOrigin } from "./rtf.ts";
 
 // MAPI property types, as they appear at the end of stream names.
 const UNICODE = "001F";
@@ -26,6 +27,22 @@ const ATTACH_MIME = "370E";
 const ATTACH_CONTENT_ID = "3712";
 
 const ATTACHMENT_STORAGE = /^(__attach_version1\.0_#[0-9A-Fa-f]{8}\/)/;
+
+function htmlFromCompressedRtf(bytes: Uint8Array, warnings: string[]): string | null {
+  let rtf: string;
+  try {
+    const { data, crcOk } = decompressRtf(bytes);
+    if (!crcOk) warnings.push("The formatted body's checksum does not match: it was modified after Outlook stored it.");
+    rtf = bytesToBinary(data);
+  } catch {
+    warnings.push("The formatted body is stored as compressed RTF that could not be read; its links are not analysed.");
+    return null;
+  }
+  if (rtfOrigin(rtf) === "rtf") {
+    warnings.push("The formatted body was written as RTF, not HTML; only its plain-text version is analysed.");
+  }
+  return htmlFromRtf(rtf);
+}
 
 /**
  * Reads an Outlook .msg (an OLE compound file of MAPI properties) into the
@@ -76,10 +93,11 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
 
   const htmlBytes = binary("", HTML);
   const charset = htmlBytes ? /<meta[^>]+charset=["']?([\w-]+)/i.exec(bytesToBinary(htmlBytes.subarray(0, 2048)))?.[1] : null;
-  const html = htmlBytes ? decodeText(htmlBytes, charset) : text("", HTML);
-  if (!html && binary("", RTF_COMPRESSED)) {
-    warnings.push("The formatted body is only stored as compressed RTF, which is not read here; its links are not analysed.");
-  }
+  let html = htmlBytes ? decodeText(htmlBytes, charset) : text("", HTML);
+  const compressedRtf = binary("", RTF_COMPRESSED);
+  // Exchange often keeps the formatted body only as compressed RTF, with the
+  // HTML the message arrived as wrapped inside it.
+  if (!html && compressedRtf) html = htmlFromCompressedRtf(compressedRtf, warnings);
 
   const attachments: Attachment[] = [];
   const prefixes = [...new Set([...streams.keys()].map((path) => ATTACHMENT_STORAGE.exec(path)?.[1]).filter((p): p is string => !!p))].sort();
