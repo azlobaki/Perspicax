@@ -703,7 +703,7 @@ html:not([lang="fr"]) [data-locale="fr"] {
 }
 ```
 
-Both titles go in the `<h1>` the same way (`<span data-locale="fr">Mentions légales et confidentialité</span><span data-locale="en">Legal notice and privacy</span>`). The `metadata.title` stays French (it is static); that is acceptable.
+Both titles go in the `<h1>` the same way (`<span data-locale="fr">Mentions légales et confidentialité</span><span data-locale="en">Legal notice and privacy</span>`). The prerendered `metadata.title` stays the French one; `LegalShell` (Step 2) sets `document.title` in an effect from `t.legal.title` (*Mentions légales et confidentialité — Perspicax* / *Legal notice and privacy — Perspicax*), so the tab follows the language.
 
 - [ ] **Step 2: The switch on this page**
 
