@@ -39,7 +39,7 @@ test("exports JSON for machines, raw and without attachment content", async () =
   const data = JSON.parse(reportJson(await spoofed()));
   assert.equal(data.generator, "Perspicax");
   assert.deepEqual(data.verdict, {
-    score: 100, band: "malicious", label: "Malicious indicators",
+    score: 100, band: "malicious", label: { en: "Malicious indicators", fr: "Indicateurs malveillants" },
     categories: data.verdict.categories,
   });
   assert.equal(data.iocs.length, 16);

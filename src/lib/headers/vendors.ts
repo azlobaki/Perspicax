@@ -88,7 +88,7 @@ function safetyTip(sfty: string): Text {
   const kind = SFTY[sfty];
   return {
     en: `Safety tip${kind ? `: ${kind.en}` : ""}`,
-    fr: `Astuce de sécurité${kind ? ` : ${kind.fr}` : ""}`,
+    fr: `Astuce de sécurité${kind ? ` : ${kind.fr}` : ""}`,
   };
 }
 
@@ -114,11 +114,11 @@ function microsoft(headers: readonly HeaderField[]): VendorVerdict | null {
   add("CAT", cat, cat ? (CAT[cat] ?? null) : null, cat !== undefined && cat !== "NONE");
   add("SCL", scl, scl ? sclMeaning(Number(scl)) : null, Number(scl) >= 5);
   add("BCL", bcl, bcl ? bclMeaning(Number(bcl)) : null, Number(bcl) >= 8);
-  add("PCL", pcl, pcl ? (Number(pcl) >= 4 ? { en: "Likely phishing", fr: "Phishing probable" } : { en: "Unlikely phishing", fr: "Phishing improbable" }) : null, Number(pcl) >= 4);
+  add("PCL", pcl, pcl ? (Number(pcl) >= 4 ? { en: "Likely phishing", fr: "Phishing probable" } : { en: "Unlikely phishing", fr: "Phishing improbable" }) : null, Number(pcl) >= 4);
   add("IPV", f.get("IPV"), IPV[f.get("IPV") ?? ""] ?? null, false);
   add("CTRY", f.get("CTRY"), { en: "Country of the connecting IP", fr: "Pays de l’IP qui se connecte" }, false);
   add("CIP", f.get("CIP"), { en: "Connecting IP", fr: "IP qui se connecte" }, false);
-  add("PTR", ptr, ptr === "InfoNoRecords" ? { en: "No reverse DNS", fr: "Pas de DNS inverse" } : { en: "Reverse DNS of the connecting IP", fr: "DNS inverse de l’IP qui se connecte" }, ptr === "InfoNoRecords");
+  add("PTR", ptr, ptr === "InfoNoRecords" ? { en: "No reverse DNS", fr: "Pas de DNS inverse" } : { en: "Reverse DNS of the connecting IP", fr: "DNS inverse de l’IP qui se connecte" }, ptr === "InfoNoRecords");
   add("LANG", f.get("LANG"), { en: "Detected language", fr: "Langue détectée" }, false);
   add("DIR", f.get("DIR"), DIR[f.get("DIR") ?? ""] ?? null, false);
   add("SFTY", sfty, sfty ? safetyTip(sfty) : null, sfty !== undefined);
@@ -192,7 +192,7 @@ function spamAssassin(headers: readonly HeaderField[]): VendorVerdict | null {
   const fields: VendorField[] = [{ key: "status", value: yes ? "Yes" : "No", meaning: { en: "Spam", fr: "Spam" }, flagged: yes }];
   const score = /score=(-?[\d.]+)/.exec(status ?? "");
   const required = /required=(-?[\d.]+)/.exec(status ?? "");
-  if (score) fields.push({ key: "score", value: score[1], meaning: required ? { en: `threshold ${required[1]}`, fr: `seuil ${required[1]}` } : null, flagged: yes });
+  if (score) fields.push({ key: "score", value: score[1], meaning: required ? { en: `threshold ${required[1]}`, fr: `seuil ${required[1]}` } : null, flagged: yes });
   return { vendor: "SpamAssassin", verdict: yes ? "spam" : "clean", fields };
 }
 
