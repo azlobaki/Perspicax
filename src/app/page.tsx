@@ -8,6 +8,7 @@ import { parseHtml } from "@/components/parseHtml";
 import ReportView from "@/components/ReportView";
 import SettingsPanel from "@/components/SettingsPanel";
 import TopBar, { type FileMeta } from "@/components/TopBar";
+import { LocaleProvider } from "@/i18n/LocaleContext";
 import { useSettings } from "@/hooks/useSettings";
 import { analyzeEmail, type EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
@@ -21,7 +22,7 @@ type Loaded = { id: number; email: ParsedEmail; file: FileMeta };
 const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 
 export default function Home() {
-  const { settings, setSettings, loaded: settingsLoaded } = useSettings();
+  const { settings, setSettings, loaded: settingsLoaded, locale, setLocale } = useSettings();
   const [current, setCurrent] = useState<Loaded | null>(null);
   const [result, setResult] = useState<{ id: number; report: EmailReport } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -141,20 +142,24 @@ export default function Home() {
   }
 
   return (
-    <>
-      <TopBar
-        file={current?.file ?? null}
-        theme={settingsLoaded ? settings.theme : null}
-        onTheme={(theme) => setSettings((s) => ({ ...s, theme }))}
-        onClose={() => {
-          setCurrent(null);
-          setResult(null);
-        }}
-        settingsOpen={showSettings}
-        onSettings={() => setShowSettings((open) => !open)}
-      />
-      {main}
-      <Footer />
-    </>
+    <LocaleProvider locale={locale}>
+      <div data-localised className="contents">
+        <TopBar
+          file={current?.file ?? null}
+          theme={settingsLoaded ? settings.theme : null}
+          onTheme={(theme) => setSettings((s) => ({ ...s, theme }))}
+          locale={locale}
+          onLocale={setLocale}
+          onClose={() => {
+            setCurrent(null);
+            setResult(null);
+          }}
+          settingsOpen={showSettings}
+          onSettings={() => setShowSettings((open) => !open)}
+        />
+        {main}
+        <Footer />
+      </div>
+    </LocaleProvider>
   );
 }
