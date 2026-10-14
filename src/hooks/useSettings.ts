@@ -23,10 +23,12 @@ export function useSettings() {
   }, [loaded, settings.theme]);
 
   useEffect(() => {
+    // Until the stored value is read, the boot script's `lang` must stand.
+    if (!loaded) return;
     const root = document.documentElement;
     root.lang = locale;
     // French visitors' content is hidden until now (globals.css), so English never flashes.
-    if (loaded) root.dataset.localeReady = "";
+    root.dataset.localeReady = "";
   }, [loaded, locale]);
 
   const setLocale = (next: Locale) => setSettings((s) => ({ ...s, locale: next }));
