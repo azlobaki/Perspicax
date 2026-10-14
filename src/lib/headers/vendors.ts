@@ -12,9 +12,9 @@ export type VendorVerdict = {
 };
 
 const SFV: Record<string, Text> = {
-  BLK: { en: "Blocked: sender on the user's blocked list", fr: "Bloqué : expéditeur dans la liste des expéditeurs bloqués de l’utilisateur" },
+  BLK: { en: "Blocked: sender on the user's blocked list", fr: "Bloqué\u00a0: expéditeur dans la liste des expéditeurs bloqués de l’utilisateur" },
   NSPM: { en: "Not spam", fr: "Pas du spam" },
-  SFE: { en: "Allowed: sender on the user's safe list", fr: "Autorisé : expéditeur dans la liste des expéditeurs fiables de l’utilisateur" },
+  SFE: { en: "Allowed: sender on the user's safe list", fr: "Autorisé\u00a0: expéditeur dans la liste des expéditeurs fiables de l’utilisateur" },
   SKA: { en: "Allowed by an anti-spam policy", fr: "Autorisé par une stratégie anti-spam" },
   SKB: { en: "Blocked by an anti-spam policy", fr: "Bloqué par une stratégie anti-spam" },
   SKI: { en: "Internal message, filtering skipped", fr: "Message interne, filtrage ignoré" },
@@ -88,7 +88,7 @@ function safetyTip(sfty: string): Text {
   const kind = SFTY[sfty];
   return {
     en: `Safety tip${kind ? `: ${kind.en}` : ""}`,
-    fr: `Astuce de sécurité${kind ? ` : ${kind.fr}` : ""}`,
+    fr: `Astuce de sécurité${kind ? `\u00a0: ${kind.fr}` : ""}`,
   };
 }
 

@@ -16,3 +16,8 @@ export function detectLocale(languages: readonly string[]): Locale {
   }
   return "en";
 }
+
+/** The browser's languages, from `navigator`: some browsers leave `languages` empty and set only `language`. */
+export function browserLanguages(nav: { languages?: readonly string[]; language?: string }): readonly string[] {
+  return nav.languages?.length ? nav.languages : [nav.language ?? ""];
+}

@@ -38,20 +38,20 @@ function htmlFromCompressedRtf(bytes: Uint8Array, warnings: Text[]): string | nu
     const { data, crcOk } = decompressRtf(bytes);
     if (!crcOk) warnings.push({
       en: "The formatted body's checksum does not match: it was modified after Outlook stored it.",
-      fr: "La somme de contrôle du corps mis en forme ne correspond pas : il a été modifié après son enregistrement par Outlook.",
+      fr: "La somme de contrôle du corps mis en forme ne correspond pas\u00a0: il a été modifié après son enregistrement par Outlook.",
     });
     rtf = bytesToBinary(data);
   } catch {
     warnings.push({
       en: "The formatted body is stored as compressed RTF that could not be read; its links are not analysed.",
-      fr: "Le corps mis en forme est stocké en RTF compressé qui n’a pas pu être lu : ses liens ne sont pas analysés.",
+      fr: "Le corps mis en forme est stocké en RTF compressé qui n’a pas pu être lu\u00a0: ses liens ne sont pas analysés.",
     });
     return null;
   }
   if (rtfOrigin(rtf) === "rtf") {
     warnings.push({
       en: "The formatted body was written as RTF, not HTML; only its plain-text version is analysed.",
-      fr: "Le corps mis en forme a été écrit en RTF et non en HTML : seule sa version en texte brut est analysée.",
+      fr: "Le corps mis en forme a été écrit en RTF et non en HTML\u00a0: seule sa version en texte brut est analysée.",
     });
   }
   return htmlFromRtf(rtf);
@@ -103,7 +103,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     if (subject) headers.push({ name: "Subject", value: subject });
     warnings.push({
       en: "No transport headers: this message was probably never sent over the internet, so only its sender, recipients and subject are known.",
-      fr: "Aucun en-tête de transport : ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
+      fr: "Aucun en-tête de transport\u00a0: ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
     });
   }
 
@@ -124,7 +124,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
       if ([...streams.keys()].some((path) => path.startsWith(`${prefix}__substg1.0_${ATTACH_DATA}${EMBEDDED}/`))) {
         warnings.push({
           en: `The attached message “${filename}” is embedded in Outlook's own format and was not analysed.`,
-          fr: `Le message joint « ${filename} » est intégré dans le format propre à Outlook et n’a pas été analysé.`,
+          fr: `Le message joint «\u00a0${filename}\u00a0» est intégré dans le format propre à Outlook et n’a pas été analysé.`,
         });
       }
       continue;

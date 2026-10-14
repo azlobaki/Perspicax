@@ -20,7 +20,7 @@ const placeholder = (locale: Locale) =>
   );
 
 // The title ends with the link's address, so the text carries its own separator.
-const LINK_DISABLED: Text = { en: "Link disabled in preview: ", fr: "Lien désactivé dans l’aperçu : " };
+const LINK_DISABLED: Text = { en: "Link disabled in preview: ", fr: "Lien désactivé dans l’aperçu\u00a0: " };
 
 function stripCssUrls(css: string): string {
   return css

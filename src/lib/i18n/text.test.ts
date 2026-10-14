@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectLocale, isLocale } from "./text.ts";
+import { browserLanguages, detectLocale, isLocale } from "./text.ts";
 
 test("French for any French browser, English otherwise", () => {
   assert.equal(detectLocale(["fr-FR", "en-US"]), "fr");
@@ -17,4 +17,12 @@ test("knows its locales", () => {
   assert.equal(isLocale("en"), true);
   assert.equal(isLocale("de"), false);
   assert.equal(isLocale(null), false);
+});
+
+test("falls back to navigator.language when navigator.languages is empty", () => {
+  assert.deepEqual(browserLanguages({ languages: ["fr-FR", "en"], language: "de" }), ["fr-FR", "en"]);
+  assert.deepEqual(browserLanguages({ languages: [], language: "fr-FR" }), ["fr-FR"]);
+  assert.deepEqual(browserLanguages({ language: "fr" }), ["fr"]);
+  assert.deepEqual(browserLanguages({}), [""]);
+  assert.equal(detectLocale(browserLanguages({ languages: [], language: "fr-CA" })), "fr");
 });

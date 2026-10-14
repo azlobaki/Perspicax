@@ -242,7 +242,7 @@ const RULES: Rule[] = [
   { flag: "rtlo", severity: "high", weight: 15, title: { en: "File name uses a direction override", fr: "Nom de fichier avec inversion du sens d’écriture" },
     explanation: {
       en: "A right-to-left override reverses the end of the name on screen, so “fdp.exe” displays as “exe.pdf”.",
-      fr: "Un caractère de droite à gauche inverse la fin du nom à l’écran\u00a0: « fdp.exe » s’affiche « exe.pdf ».",
+      fr: "Un caractère de droite à gauche inverse la fin du nom à l’écran\u00a0: «\u00a0fdp.exe\u00a0» s’affiche «\u00a0exe.pdf\u00a0».",
     } },
   { flag: "qr-code", severity: "high", weight: 15, title: { en: "QR code in an image", fr: "Code QR dans une image" },
     explanation: {

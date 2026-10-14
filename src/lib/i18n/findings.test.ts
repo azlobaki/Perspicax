@@ -47,7 +47,7 @@ test("French findings read as French", async () => {
     orgDomains: ["rhone-energie.fr"], vipNames: ["Claire Martin"], parseHtml,
   });
   assert.deepEqual(payroll.findings.map((f) => f.title.fr), [
-    "Nom affiché d’une personne protégée : Claire Martin",
+    "Nom affiché d’une personne protégée\u00a0: Claire Martin",
     "Demande de paiement ou de coordonnées bancaires depuis une adresse de messagerie gratuite",
   ]);
 });

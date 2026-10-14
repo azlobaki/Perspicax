@@ -158,7 +158,7 @@ export const AUTH_SOURCE_NOTE: Record<NonNullable<AuthSummary["source"]>, Text |
   "Received-SPF": { en: "from Received-SPF only", fr: "d’après Received-SPF seul" },
   "ARC-Authentication-Results": {
     en: "from an ARC copy, written upstream: a pass proves little",
-    fr: "d’après une copie ARC, écrite en amont : un résultat « pass » prouve peu de chose",
+    fr: "d’après une copie ARC, écrite en amont\u00a0: un résultat «\u00a0pass\u00a0» prouve peu de chose",
   },
 };
 

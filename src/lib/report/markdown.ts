@@ -48,6 +48,7 @@ const L = {
     result: "Result",
     details: "Details",
     dkimBody: "DKIM body hash for",
+    colon: ":",
     dkimMatch: "matches the body",
     dkimMismatch: "does not match: the body changed after signing",
     dkimUnchecked: "not checked (unsupported algorithm)",
@@ -56,7 +57,7 @@ const L = {
     time: "Time (UTC)",
     by: "By",
     links: "Links",
-    flagged: "flagged",
+    flagged: (n: number) => `${n} flagged`,
     noFlagged: "No flagged link.",
     shows: "shows",
     lookalikeOf: "lookalike of",
@@ -76,11 +77,11 @@ const L = {
   fr: {
     noSubject: "(sans objet)",
     title: "Analyse d’e-mail",
-    verdict: "Verdict :",
+    verdict: "Verdict\u00a0:",
     score: "score",
-    analysed: "Analysé le :",
+    analysed: "Analysé le\u00a0:",
     analysedWith: "avec Perspicax, hors ligne",
-    file: "Fichier :",
+    file: "Fichier\u00a0:",
     field: "Champ",
     value: "Valeur",
     from: "De",
@@ -89,7 +90,7 @@ const L = {
     subject: "Objet",
     findings: "Constats",
     noFinding: "Aucun constat.",
-    categoryScore: "Score par catégorie :",
+    categoryScore: "Score par catégorie\u00a0:",
     authentication: "Authentification",
     noAuth: "Aucun résultat d’authentification.",
     recordedBy: "Enregistré par",
@@ -98,15 +99,16 @@ const L = {
     result: "Résultat",
     details: "Détails",
     dkimBody: "Empreinte du corps DKIM pour",
+    colon: "\u00a0:",
     dkimMatch: "correspond au corps",
-    dkimMismatch: "ne correspond pas : le corps a changé après la signature",
+    dkimMismatch: "ne correspond pas\u00a0: le corps a changé après la signature",
     dkimUnchecked: "non vérifiée (algorithme non pris en charge)",
     relay: "Chaîne de relais (du plus ancien au plus récent)",
     noReceived: "Aucun en-tête Received.",
     time: "Heure (UTC)",
     by: "Par",
     links: "Liens",
-    flagged: "signalés",
+    flagged: (n: number) => `${n} signalé${n > 1 ? "s" : ""}`,
     noFlagged: "Aucun lien signalé.",
     shows: "affiche",
     lookalikeOf: "domaine sosie de",
@@ -120,7 +122,7 @@ const L = {
     indicators: "Indicateurs",
     severity: { high: "Élevé", medium: "Moyen", low: "Faible", info: "Info" } as const,
     ioc: { url: "URL", domain: "Domaines", ip: "Adresses IP", email: "Adresses e-mail", sha256: "SHA-256", sha1: "SHA-1", md5: "MD5" } as Record<IocType, string>,
-    warning: "Perspicax est une aide à la décision : son verdict repose sur des heuristiques, peut se tromper dans un sens comme dans l’autre, et ne remplace pas l’analyse d’une personne qualifiée.",
+    warning: "Perspicax est une aide à la décision\u00a0: son verdict repose sur des heuristiques, peut se tromper dans un sens comme dans l’autre, et ne remplace pas l’analyse d’une personne qualifiée.",
     generated: (defanged: boolean) => `Généré par Perspicax. Les indicateurs ${defanged ? "sont" : "ne sont pas"} neutralisés.`,
   },
 };
@@ -172,7 +174,7 @@ export function reportMarkdown(input: ReportInput): string {
   }
   for (const check of report.dkim) {
     const verdict = check.result === "match" ? l.dkimMatch : check.result === "mismatch" ? l.dkimMismatch : l.dkimUnchecked;
-    out.push("", `${l.dkimBody} d=${safe(check.signature.domain)}${locale === "fr" ? " " : ""}: ${verdict}.`);
+    out.push("", `${l.dkimBody} d=${safe(check.signature.domain)}${l.colon} ${verdict}.`);
   }
   out.push("");
 
@@ -191,7 +193,7 @@ export function reportMarkdown(input: ReportInput): string {
 
   const clickable = report.links.links.filter(isClickable);
   const flagged = clickable.filter((k) => k.url.flags.length > 0 || k.shownHost || k.hidden);
-  out.push(`## ${l.links} (${clickable.length}, ${flagged.length} ${l.flagged})`, "");
+  out.push(`## ${l.links} (${clickable.length}, ${l.flagged(flagged.length)})`, "");
   if (flagged.length === 0) out.push(l.noFlagged);
   for (const link of flagged.slice(0, MAX_LINKS)) {
     const notes = [

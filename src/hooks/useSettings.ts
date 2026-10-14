@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { detectLocale, isLocale, type Locale } from "@/lib/i18n/text";
+import { browserLanguages, detectLocale, isLocale, type Locale } from "@/lib/i18n/text";
 import { DEFAULT_SETTINGS, SETTINGS_KEY, parseSettings, type Settings } from "@/lib/settings";
 import { useLocalStorage } from "./useLocalStorage";
 
@@ -15,7 +15,7 @@ const bootLocale = (): Locale => {
 export function useSettings() {
   const [settings, setSettings, loaded] = useLocalStorage<Settings>(SETTINGS_KEY, DEFAULT_SETTINGS, parseSettings);
   const booted = useSyncExternalStore(noSubscription, bootLocale, () => "en" as Locale);
-  const locale: Locale = loaded ? (settings.locale ?? detectLocale(navigator.languages ?? [])) : booted;
+  const locale: Locale = loaded ? (settings.locale ?? detectLocale(browserLanguages(navigator))) : booted;
 
   useEffect(() => {
     // Until the stored value is read, the boot script's choice must stand.

@@ -85,11 +85,11 @@ function parsePart(binary: string, depth: number, warnings: Text[]): MimePart {
       depth >= MAX_DEPTH
         ? {
             en: "Multipart nesting too deep; inner parts were not parsed.",
-            fr: "Imbrication multipart trop profonde : les parties internes n’ont pas été analysées.",
+            fr: "Imbrication multipart trop profonde\u00a0: les parties internes n’ont pas été analysées.",
           }
         : {
             en: `A ${contentType} part has no boundary; it was read as a single body.`,
-            fr: `Une partie ${contentType} n’a pas de séparateur : elle a été lue comme un corps unique.`,
+            fr: `Une partie ${contentType} n’a pas de séparateur\u00a0: elle a été lue comme un corps unique.`,
           },
     );
   }

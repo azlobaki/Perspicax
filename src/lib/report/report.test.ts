@@ -51,7 +51,7 @@ test("exports JSON for machines, raw and without attachment content", async () =
 test("writes the Markdown report in French", async () => {
   const md = reportMarkdown({ ...(await spoofed()), defang: true, locale: "fr" });
   assert.match(md, /^## Authentification$/m);
-  assert.match(md, /^\*\*Verdict :\*\* Indicateurs malveillants — score 100\/100$/m);
+  assert.match(md, /^\*\*Verdict\u00a0:\*\* Indicateurs malveillants — score 100\/100$/m);
   assert.match(md, /Le texte du lien montre une autre destination/);
   assert.match(md, /ne remplace pas l’analyse d’une personne qualifiée/);
   assert.doesNotMatch(md, /^## Authentication$/m);

@@ -35,7 +35,7 @@ export function parseHeaderBlock(header: string, warnings?: Text[]): HeaderField
     if (!/^[!-9;-~]+$/.test(name)) {
       if (line.trim()) warnings?.push({
         en: `Ignored a line that is not a header: ${line.slice(0, 80)}`,
-        fr: `Ligne ignorée, car ce n’est pas un en-tête : ${line.slice(0, 80)}`,
+        fr: `Ligne ignorée, car ce n’est pas un en-tête\u00a0: ${line.slice(0, 80)}`,
       });
       continue;
     }
