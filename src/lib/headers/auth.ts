@@ -1,6 +1,6 @@
 import type { HeaderField } from "../email.ts";
 import type { Finding } from "../finding.ts";
-import { getHeader } from "../mime/headers.ts";
+import { getHeader, getHeaders } from "../mime/headers.ts";
 import { sameOrg } from "../net/domain.ts";
 import type { Hop } from "./received.ts";
 
@@ -18,7 +18,7 @@ export type AuthEntry = {
 export type AuthSummary = {
   /** The server whose verdict this is. */
   recordedBy: string | null;
-  source: "Authentication-Results" | "Received-SPF" | null;
+  source: "Authentication-Results" | "Hornetsecurity" | "Received-SPF" | "ARC-Authentication-Results" | null;
   entries: AuthEntry[];
 };
 
@@ -141,9 +141,49 @@ export function authSummary(headers: readonly HeaderField[], hops: readonly Hop[
     const parsed = parseAuthResults(top);
     return { recordedBy: parsed.authservId ?? lastBy, source: "Authentication-Results", entries: parsed.entries };
   }
+  const hornet = hornetsecurityResults(headers);
+  if (hornet.length > 0) return { recordedBy: "Hornetsecurity", source: "Hornetsecurity", entries: hornet };
   const spf = getHeader(headers, "received-spf");
   if (spf !== null) return { recordedBy: lastBy, source: "Received-SPF", entries: [parseReceivedSpf(spf)] };
+  const arc = arcResults(headers);
+  if (arc) return { recordedBy: arc.authservId, source: "ARC-Authentication-Results", entries: arc.entries };
   return { recordedBy: null, source: null, entries: [] };
+}
+
+/** Where the results came from, when it was not the receiving server's Authentication-Results. */
+export const AUTH_SOURCE_NOTE: Record<NonNullable<AuthSummary["source"]>, string | null> = {
+  "Authentication-Results": null,
+  Hornetsecurity: "from the X-antispameurope headers",
+  "Received-SPF": "from Received-SPF only",
+  "ARC-Authentication-Results": "from an ARC copy, written upstream: a pass proves little",
+};
+
+const VERDICT = /^(pass|fail|softfail|neutral|none|temperror|permerror)$/;
+
+/** The gateway's own SPF and DKIM headers, for when it wrote no Authentication-Results. */
+function hornetsecurityResults(headers: readonly HeaderField[]): AuthEntry[] {
+  const entry = (method: string, value: string): AuthEntry | null => {
+    const result = value.trim().toLowerCase();
+    return VERDICT.test(result) ? { method, result, reason: null, comment: null, props: {} } : null;
+  };
+  return [
+    ...getHeaders(headers, "x-antispameurope-spfresult").map((v) => entry("spf", v)),
+    // Other values ("Positive policy"…) are not verdicts.
+    ...getHeaders(headers, "x-antispameurope-dkim").map((v) => entry("dkim", v)),
+  ].filter((e): e is AuthEntry => e !== null);
+}
+
+/**
+ * The last resort: an ARC copy, from the highest instance that recorded SPF,
+ * DKIM or DMARC. ARC is written upstream, possibly by the sender, so a pass
+ * proves little; a failure still counts, since no sender forges its own.
+ */
+function arcResults(headers: readonly HeaderField[]): { authservId: string | null; entries: AuthEntry[] } | null {
+  const instances = getHeaders(headers, "arc-authentication-results")
+    .map((value) => ({ i: Number(/^\s*i=(\d+)/.exec(value)?.[1] ?? 0), ...parseAuthResults(value) }))
+    .filter((arc) => arc.entries.some((e) => ["spf", "dkim", "dmarc"].includes(e.method)))
+    .sort((a, b) => b.i - a.i);
+  return instances[0] ?? null;
 }
 
 const FAILING = new Set(["fail", "softfail", "permerror", "hardfail"]);

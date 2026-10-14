@@ -56,6 +56,28 @@ test("decodes Gmail and SpamAssassin markers", () => {
   assert.equal(sa.fields.find((f) => f.key === "score")?.value, "7.2");
 });
 
+test("decodes Hornetsecurity", () => {
+  const [clean] = vendorVerdicts(headers({
+    "X-antispameurope-Spamstatus": "CLEAN",
+    "X-antispameurope-REASON": "Score-b:-9.293697",
+    "X-antispameurope-Virusscan": "CLEAN",
+  }));
+  assert.equal(clean.vendor, "Hornetsecurity");
+  assert.equal(clean.verdict, "clean");
+  assert.deepEqual(clean.fields.map((f) => [f.key, f.value, f.flagged]), [
+    ["Spamstatus", "CLEAN", false],
+    ["Reason", "Score-b:-9.293697", false],
+    ["Virusscan", "CLEAN", false],
+  ]);
+  const verdict = (status: string, virus = "CLEAN") =>
+    vendorVerdicts(headers({ "X-Antispameurope-Spamstatus": status, "X-Antispameurope-Virusscan": virus }))[0].verdict;
+  assert.equal(verdict("INFOMAIL"), "bulk");
+  assert.equal(verdict("SPAM"), "spam");
+  assert.equal(verdict("PHISHING"), "phishing");
+  assert.equal(verdict("CLEAN", "INFECTED"), "malware");
+  assert.equal(verdict("SOMETHING-NEW"), null);
+});
+
 test("returns nothing when no gateway left a verdict", () => {
   assert.deepEqual(vendorVerdicts(headers({ Subject: "x" })), []);
 });
