@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/i18n/LocaleContext";
+import { useLocale, useT } from "@/i18n/LocaleContext";
 import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { reportJson } from "@/lib/report/json";
@@ -25,7 +25,8 @@ export default function ExportBar({ email, report, file, defang }: {
   defang: boolean;
 }) {
   const t = useT();
-  const markdown = () => reportMarkdown({ email, report, file, generatedAt: new Date(), defang });
+  const locale = useLocale();
+  const markdown = () => reportMarkdown({ email, report, file, generatedAt: new Date(), defang, locale });
   const base = file.name.replace(/\.[^.]+$/, "") || "email";
   return (
     <div className="mt-5 flex flex-wrap items-center gap-2">
