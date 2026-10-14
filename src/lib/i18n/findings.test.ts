@@ -89,3 +89,11 @@ test("our notations in the evidence read French", async () => {
   assert.ok(french?.includes("SCL: 9 (Spam à forte confiance)"), String(french));
   assert.ok(french?.includes("CAT: PHSH (Hameçonnage)"), String(french));
 });
+
+test("an Outlook message with an RTF body reads French too", async () => {
+  const report = await analyseFixture("exchange-rtf.msg");
+  assert.ok(report.findings.length > 0);
+  for (const finding of report.findings) assert.ok(finding.title.fr.trim(), `${finding.id}: empty French title`);
+  const link = report.findings.find((f) => f.id === "link.deceptive");
+  assert.equal(link?.title.fr, "Le texte du lien montre une autre destination");
+});

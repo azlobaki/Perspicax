@@ -209,8 +209,19 @@ try {
     await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", file)] });
     return true;
   };
-  const waitForTabs = () =>
-    evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
+  // Waits up to 5 s for the report's tabs; records a failure for `where` and returns false when they never come.
+  const waitForTabs = async (where) => {
+    const shown = await evaluate(`new Promise((ok) => {
+      const start = Date.now();
+      (function poll() {
+        if (document.querySelector('[role="tab"]')) ok(true);
+        else if (Date.now() - start > 5000) ok(false);
+        else setTimeout(poll, 50);
+      })();
+    })`);
+    if (!shown) failures.push(`${where}: the report's tabs never appeared`);
+    return shown;
+  };
   // Clicks every tab in turn, letting it settle, and runs `visit` on each.
   const forEachTab = async (visit) => {
     const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
@@ -302,8 +313,11 @@ try {
   for (const theme of THEMES) {
     await loadWithSettings({ theme, locale: "fr" });
     const before = external.length;
-    await openFixture("spoofed-invoice.eml");
-    await waitForTabs();
+    if (!(await openFixture("spoofed-invoice.eml"))) {
+      failures.push(`${theme} in French: no file input on the page`);
+      continue;
+    }
+    if (!(await waitForTabs(`${theme} in French`))) continue;
     let seen = await evaluate("document.body.innerText");
     await forEachTab(async () => {
       seen += ` ${await evaluate("document.body.innerText")}`;
@@ -321,8 +335,11 @@ try {
   await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   for (const theme of THEMES) {
     await loadWithSettings({ theme });
-    await openFixture("spoofed-invoice.eml");
-    await waitForTabs();
+    if (!(await openFixture("spoofed-invoice.eml"))) {
+      failures.push(`${theme} at 390 px: no file input on the page`);
+      continue;
+    }
+    if (!(await waitForTabs(`${theme} at 390 px`))) continue;
     await forEachTab(async (id) => {
       const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
       if (overflow > 0) failures.push(`${theme} at 390 px, ${id}: ${overflow} px of horizontal overflow`);
@@ -330,6 +347,16 @@ try {
     await evaluate(`document.getElementById("tab-headers").click()`);
     const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
     writeFileSync(join(SHOTS, `${theme}-phone.png`), Buffer.from(data, "base64"));
+  }
+  // French words are longer: one theme at phone width in French, every tab.
+  await loadWithSettings({ theme: "suisse", locale: "fr" });
+  if (!(await openFixture("spoofed-invoice.eml"))) {
+    failures.push("suisse in French at 390 px: no file input on the page");
+  } else if (await waitForTabs("suisse in French at 390 px")) {
+    await forEachTab(async (id) => {
+      const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
+      if (overflow > 0) failures.push(`suisse in French at 390 px, ${id}: ${overflow} px of horizontal overflow`);
+    });
   }
 } finally {
   cdp.close();
