@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 
 /**
  * State backed by `localStorage`, safe for a statically exported page: the
@@ -9,6 +9,9 @@ import { useEffect, useRef, useState } from "react";
  *
  * `deserialize` receives the raw parsed JSON so callers can validate it; return
  * the fallback yourself if the shape is wrong.
+ *
+ * Nothing is written until the value is changed through the returned setter:
+ * a visitor who changes nothing leaves nothing behind.
  */
 export function useLocalStorage<T>(
   key: string,
@@ -18,6 +21,7 @@ export function useLocalStorage<T>(
   const [value, setValue] = useState<T>(fallback);
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
+  const changedRef = useRef(false);
   // Pinned on purpose: the stored value is read once, with the validator the
   // hook was first given.
   const deserializeRef = useRef(deserialize);
@@ -36,7 +40,7 @@ export function useLocalStorage<T>(
   useEffect(() => {
     // Never write before the initial read, or the fallback would wipe the
     // user's saved data on the very first render.
-    if (!loadedRef.current) return;
+    if (!loadedRef.current || !changedRef.current) return;
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch {
@@ -44,5 +48,10 @@ export function useLocalStorage<T>(
     }
   }, [key, value]);
 
-  return [value, setValue, loaded] as const;
+  const update = useCallback((next: SetStateAction<T>) => {
+    changedRef.current = true;
+    setValue(next);
+  }, []);
+
+  return [value, update, loaded] as const;
 }
