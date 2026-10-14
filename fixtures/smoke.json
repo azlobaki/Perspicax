@@ -87,5 +87,39 @@
       "Replies go to a different domain",
       "DMARC failed for rhone-energie-direction.com"
     ]
+  },
+  {
+    "file": "vip-payroll.eml",
+    "expect": [
+      "Suspicious",
+      "Payment or bank-details request from a webmail address",
+      "mettre à jour mes"
+    ]
+  },
+  {
+    "file": "vip-payroll.eml",
+    "settings": {
+      "orgDomains": [
+        "rhone-energie.fr"
+      ],
+      "vipNames": [
+        "Claire Martin"
+      ]
+    },
+    "expect": [
+      "Likely phishing",
+      "Display name of a protected person: Claire Martin",
+      "Payment or bank-details request from a webmail address"
+    ]
+  },
+  {
+    "file": "exchange-rtf.msg",
+    "expect": [
+      "Likely phishing",
+      "Link text shows another destination",
+      "from an ARC copy",
+      "Hornetsecurity classified it as spam",
+      "m365-account-alert.top"
+    ]
   }
 ]

@@ -1,7 +1,7 @@
 import type { EmailReport } from "../analyze.ts";
 import type { ParsedEmail } from "../email.ts";
 import { formatDelay, formatSize, formatTime, formatUtc } from "../format.ts";
-import { entryDetails } from "../headers/auth.ts";
+import { AUTH_SOURCE_NOTE, entryDetails } from "../headers/auth.ts";
 import { defang, defangText } from "../ioc/defang.ts";
 import { IOC_TYPES, type IocType } from "../ioc/types.ts";
 import { isClickable } from "../links/analyze.ts";
@@ -61,7 +61,8 @@ export function reportMarkdown(input: ReportInput): string {
   if (headers.auth.entries.length === 0) {
     out.push("No authentication results.");
   } else {
-    out.push(`Recorded by ${code(safe(headers.auth.recordedBy ?? "unknown"))}.`, "");
+    const note = headers.auth.source ? AUTH_SOURCE_NOTE[headers.auth.source] : null;
+    out.push(`Recorded by ${code(safe(headers.auth.recordedBy ?? "unknown"))}${note ? `, ${note}` : ""}.`, "");
     out.push("| Method | Result | Details |", "|---|---|---|");
     for (const entry of headers.auth.entries) out.push(`| ${entry.method} | ${entry.result} | ${cell(safe(entryDetails(entry)))} |`);
   }

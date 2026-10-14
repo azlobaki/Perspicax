@@ -9,6 +9,7 @@ import {
   THEME_BOOT_SCRIPT,
   isValidTemplate,
   normaliseDomain,
+  normaliseVipName,
   parseSettings,
 } from "./settings.ts";
 
@@ -60,10 +61,18 @@ test("normalises organisation domains however they are typed", () => {
   for (const bad of ["not a domain", "localhost", "1.2.3.4", "", "exa mple.com"]) assert.equal(normaliseDomain(bad), null, bad);
 });
 
+test("keeps protected names that hold a first and a last name", () => {
+  assert.equal(normaliseVipName("  Claire \t Martin "), "Claire Martin");
+  assert.equal(normaliseVipName("DUPONT Jean-Pierre"), "DUPONT Jean-Pierre");
+  for (const bad of ["Madonna", "", "   ", "A B", "x".repeat(81) + " y"]) assert.equal(normaliseVipName(bad), null, bad);
+  assert.deepEqual(parseSettings({}).vipNames, []);
+});
+
 test("keeps valid settings and drops the rest", () => {
   const settings = parseSettings({
     theme: "console",
     orgDomains: ["Rhone-Energie.fr", "rhone-energie.fr", "nope", 42],
+    vipNames: ["  Claire   Martin ", "claire martin", "Madonna", 7, "Jean-Pierre DUPONT"],
     defang: false,
     pivots: [
       { id: "a", name: "Mine", types: ["domain", "bogus"], template: "https://lookup.example/?q={value}" },
@@ -74,6 +83,7 @@ test("keeps valid settings and drops the rest", () => {
   assert.deepEqual(settings, {
     theme: "console",
     orgDomains: ["rhone-energie.fr"],
+    vipNames: ["Claire Martin", "Jean-Pierre DUPONT"],
     defang: false,
     pivots: [{ id: "a", name: "Mine", types: ["domain"], template: "https://lookup.example/?q={value}" }],
   });

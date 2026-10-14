@@ -50,7 +50,12 @@ function normaliseName(text: string): string {
   return text.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function senderFindings(info: SenderInfo, orgDomains: readonly string[]): Finding[] {
+/** Words of a person's name: no accents, no case, hyphens and punctuation as spaces. */
+function nameWords(text: string): string[] {
+  return text.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+export function senderFindings(info: SenderInfo, orgDomains: readonly string[], vipNames: readonly string[] = []): Finding[] {
   const findings: Finding[] = [];
   const fromValues = info.rows.filter((r) => r.header === "From").map((r) => `From: ${r.value}`);
 
@@ -128,6 +133,23 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[]):
         id: "sender.org-impersonation", category: "sender", severity: "medium", title: "Display name imitates your organisation",
         explanation: `The display name looks like ${imitated}, but the address is at ${from.domain}.`,
         evidence, weight: 10,
+      });
+    }
+    // The CEO-fraud classic: a protected person's name, any order, on an address outside the organisation.
+    const displayed = nameWords(from.name);
+    const vip = vipNames.find((v) => {
+      const words = nameWords(v);
+      return words.length >= 2 && words.every((w) => displayed.includes(w));
+    });
+    if (vip && !orgDomains.some((d) => sameOrg(d, from.domain))) {
+      findings.push({
+        id: "sender.vip-impersonation", category: "sender", severity: "high", title: `Display name of a protected person: ${vip}`,
+        explanation:
+          `The sender shows the name of ${vip}, on your list of protected people, but writes from ${from.domain}` +
+          (isFreeMail(from.domain) ? ", a free webmail address." : ", which is not one of your organisation's domains.") +
+          " Fraudsters borrow executives' names to ask for urgent transfers or bank-detail changes." +
+          (orgDomains.length === 0 ? " Add your organisation's domains in Settings so mail from the real person is recognised." : ""),
+        evidence, weight: 20,
       });
     }
   }

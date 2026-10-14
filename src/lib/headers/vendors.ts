@@ -177,9 +177,30 @@ function spamAssassin(headers: readonly HeaderField[]): VendorVerdict | null {
   return { vendor: "SpamAssassin", verdict: yes ? "spam" : "clean", fields };
 }
 
+// Hornetsecurity (formerly antispameurope) states its verdict in plain words.
+function hornetsecurity(headers: readonly HeaderField[]): VendorVerdict | null {
+  const status = getHeader(headers, "x-antispameurope-spamstatus")?.trim();
+  const reason = getHeader(headers, "x-antispameurope-reason")?.trim();
+  const virus = getHeader(headers, "x-antispameurope-virusscan")?.trim();
+  if (status === undefined && virus === undefined) return null;
+  const s = (status ?? "").toUpperCase();
+  const infected = virus !== undefined && virus.toUpperCase() !== "CLEAN";
+  let verdict: VendorVerdict["verdict"] = null;
+  if (infected || /VIRUS|MALWARE|THREAT/.test(s)) verdict = "malware";
+  else if (s.includes("PHISH")) verdict = "phishing";
+  else if (s.includes("SPAM")) verdict = "spam";
+  else if (s === "INFOMAIL" || s.includes("NEWSLETTER")) verdict = "bulk";
+  else if (s === "CLEAN") verdict = "clean";
+  const fields: VendorField[] = [];
+  if (status !== undefined) fields.push({ key: "Spamstatus", value: status, meaning: null, flagged: s !== "CLEAN" && s !== "INFOMAIL" });
+  if (reason !== undefined) fields.push({ key: "Reason", value: reason, meaning: null, flagged: false });
+  if (virus !== undefined) fields.push({ key: "Virusscan", value: virus, meaning: null, flagged: infected });
+  return { vendor: "Hornetsecurity", verdict, fields };
+}
+
 /** Verdicts left by mail filters on the way in. */
 export function vendorVerdicts(headers: readonly HeaderField[]): VendorVerdict[] {
-  return [microsoft, proofpoint, mimecast, google, spamAssassin]
+  return [microsoft, proofpoint, mimecast, google, spamAssassin, hornetsecurity]
     .map((decode) => decode(headers))
     .filter((v): v is VendorVerdict => v !== null);
 }

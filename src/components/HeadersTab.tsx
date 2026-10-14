@@ -2,7 +2,7 @@ import type { DkimCheck } from "@/lib/dkim/bodyhash";
 import type { HeaderField } from "@/lib/email";
 import { formatDelay, formatTime } from "@/lib/format";
 import type { HeaderReport } from "@/lib/headers/analyze";
-import { entryDetails, isFailing, type AuthSummary } from "@/lib/headers/auth";
+import { AUTH_SOURCE_NOTE, entryDetails, isFailing, type AuthSummary } from "@/lib/headers/auth";
 import type { Hop } from "@/lib/headers/received";
 import type { SenderInfo, SenderRow } from "@/lib/headers/sender";
 import type { VendorVerdict } from "@/lib/headers/vendors";
@@ -50,6 +50,7 @@ function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }
           <span className="normal-case tracking-normal dossier:[font-variant:normal]">
             {" "}
             · recorded by <span className={DATA}>{auth.recordedBy}</span>
+            {auth.source && AUTH_SOURCE_NOTE[auth.source] && <> · {AUTH_SOURCE_NOTE[auth.source]}</>}
           </span>
         )}
       </h2>

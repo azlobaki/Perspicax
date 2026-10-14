@@ -61,6 +61,36 @@ test("falls back to Received-SPF, then to nothing", () => {
   assert.equal(authSummary([], []).entries.length, 0);
 });
 
+test("falls back to Hornetsecurity's own results", () => {
+  const summary = authSummary(
+    [
+      { name: "X-antispameurope-SPFresult", value: "SOFTFAIL" },
+      { name: "X-antispameurope-dkim", value: "Positive policy" },
+      { name: "X-antispameurope-dkim", value: "FAIL" },
+      { name: "Received-SPF", value: "Pass (x) client-ip=1.2.3.4;" },
+    ],
+    [],
+  );
+  assert.equal(summary.source, "Hornetsecurity");
+  assert.equal(summary.recordedBy, "Hornetsecurity");
+  assert.deepEqual(summary.entries.map((e) => `${e.method}=${e.result}`), ["spf=softfail", "dkim=fail"]);
+});
+
+test("uses an ARC copy last, the highest instance that holds results", () => {
+  const headers: HeaderField[] = [
+    { name: "ARC-Authentication-Results", value: "i=2; mx.google.com; arc=none" },
+    { name: "ARC-Authentication-Results", value: "i=1; mx.relay.example; spf=fail smtp.mailfrom=x.com; dmarc=fail header.from=x.com" },
+  ];
+  const summary = authSummary(headers, []);
+  assert.equal(summary.source, "ARC-Authentication-Results");
+  assert.equal(summary.recordedBy, "mx.relay.example");
+  assert.equal(summary.entries.find((e) => e.method === "dmarc")?.result, "fail");
+
+  const withSpf = authSummary([...headers, { name: "Received-SPF", value: "Pass (x) client-ip=1.2.3.4;" }], []);
+  assert.equal(withSpf.source, "Received-SPF");
+  assert.equal(authSummary([headers[0]], []).source, null);
+});
+
 test("knows which results count as failures", () => {
   const entry = (method: string, result: string) => ({ method, result, reason: null, comment: null, props: {} });
   assert.ok(isFailing(entry("dkim", "none")));

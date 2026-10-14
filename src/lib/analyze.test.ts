@@ -9,8 +9,8 @@ import { decodePng } from "./testing/png.ts";
 
 const read = (name: string) => readFileSync(new URL(`../../fixtures/${name}`, import.meta.url));
 const decodeImage = async (data: Uint8Array) => decodePng(data);
-const analyse = (name: string, orgDomains: string[] = []) =>
-  analyzeEmail(name.endsWith(".msg") ? parseMsg(read(name)) : parseEmail(read(name)), { orgDomains, parseHtml, decodeImage });
+const analyse = (name: string, orgDomains: string[] = [], vipNames: string[] = []) =>
+  analyzeEmail(name.endsWith(".msg") ? parseMsg(read(name)) : parseEmail(read(name)), { orgDomains, vipNames, parseHtml, decodeImage });
 const summary = async (name: string) => {
   const report = await analyse(name);
   return { ids: report.findings.map((f) => f.id), score: report.score.score, band: report.score.band };
@@ -96,13 +96,32 @@ test("pasted headers are scored on what they show", async () => {
   assert.deepEqual(report.dkim, []);
 });
 
-test("the CEO-fraud email: a display name that shows another address, likely phishing", async () => {
+test("the CEO-fraud email: a display name that shows another address and a transfer request, likely phishing", async () => {
   assert.deepEqual(await summary("bec-display-name.eml"), {
-    ids: ["auth.dmarc-fail", "sender.display-name-address", "sender.reply-to-mismatch", "route.helo-mismatch"],
-    score: 45,
+    ids: ["auth.dmarc-fail", "sender.display-name-address", "content.payment-details", "sender.reply-to-mismatch", "route.helo-mismatch"],
+    score: 55,
     band: "likely-phishing",
   });
   const own = await analyse("bec-display-name.eml", ["rhone-energie.fr"]);
   assert.ok(own.findings.some((f) => f.id === "sender.org-impersonation"));
   assert.equal(own.findings.find((f) => f.id === "sender.lookalike-domain")?.title, "Sender domain imitates rhone-energie.fr");
+});
+
+test("the payroll diversion: a payment request from webmail, worse in a protected person's name", async () => {
+  assert.deepEqual(await summary("vip-payroll.eml"), { ids: ["content.payment-details"], score: 20, band: "suspicious" });
+  const report = await analyse("vip-payroll.eml", ["rhone-energie.fr"], ["Claire Martin"]);
+  assert.deepEqual(report.findings.map((f) => f.id), ["sender.vip-impersonation", "content.payment-details"]);
+  assert.equal(report.score.score, 40);
+  assert.equal(report.score.band, "likely-phishing");
+});
+
+test("the Exchange .msg: links read from the HTML inside compressed RTF, ARC and Hornetsecurity verdicts", async () => {
+  assert.deepEqual(await summary("exchange-rtf.msg"), {
+    ids: ["link.deceptive", "auth.dmarc-fail", "sender.brand-impersonation", "vendor.hornetsecurity", "url.abused-tld"],
+    score: 57,
+    band: "likely-phishing",
+  });
+  const report = await analyse("exchange-rtf.msg");
+  assert.equal(report.headers.auth.source, "ARC-Authentication-Results");
+  assert.equal(report.headers.auth.recordedBy, "mx-gate12-hz1.hornetsecurity.com");
 });

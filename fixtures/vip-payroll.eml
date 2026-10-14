@@ -1,0 +1,27 @@
+Received: from mail-wr1-f54.google.com (mail-wr1-f54.google.com [209.85.221.54])
+	by mx01.rhone-energie.fr (Postfix) with ESMTPS id 9A2B3C4D5E
+	for <paie@rhone-energie.fr>; Wed, 14 Oct 2026 08:41:12 +0200 (CEST)
+Authentication-Results: mx01.rhone-energie.fr;
+	spf=pass smtp.mailfrom=gmail.com;
+	dkim=pass header.d=gmail.com;
+	dmarc=pass (p=none dis=none) header.from=gmail.com
+Return-Path: <claire.martin.direction@gmail.com>
+From: Claire Martin <claire.martin.direction@gmail.com>
+To: <paie@rhone-energie.fr>
+Subject: Modification de mes informations bancaires
+Date: Wed, 14 Oct 2026 08:41:09 +0200
+Message-ID: <CAJx4471payroll@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Bonjour,
+
+J'ai changé de banque ce mois-ci. Pourriez-vous mettre à jour mes
+informations bancaires avant le virement des salaires ? Je vous envoie
+mon nouveau RIB dès que vous me confirmez.
+
+Je suis en déplacement, merci de répondre uniquement par e-mail.
+
+Claire Martin
+Directrice générale

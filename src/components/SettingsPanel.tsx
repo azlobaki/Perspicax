@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { IOC_TYPES } from "@/lib/ioc/types";
 import { DEFAULT_PIVOTS, type PivotService } from "@/lib/pivots/pivots";
-import { DEFAULT_SETTINGS, SETTINGS_KEY, isValidTemplate, normaliseDomain, type Settings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, SETTINGS_KEY, isValidTemplate, normaliseDomain, normaliseVipName, type Settings } from "@/lib/settings";
 import { BUTTON, BUTTON_PRIMARY, DATA, FLAG, SECTION_TITLE, SMALL_BUTTON } from "./ui";
 
 const FIELD = "border border-hairline bg-paper px-2 py-1 focus-visible:outline-2 focus-visible:outline-signal console:bg-panel";
@@ -14,11 +14,15 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
   onClose: () => void;
 }) {
   const [domains, setDomains] = useState(settings.orgDomains.join("\n"));
+  const [vips, setVips] = useState(settings.vipNames.join("\n"));
   const [pivots, setPivots] = useState<PivotService[]>(settings.pivots);
 
   const entered = domains.split(/[\s,;]+/).filter(Boolean);
   const invalid = entered.filter((d) => normaliseDomain(d) === null);
   const valid = [...new Set(entered.map(normaliseDomain).filter((d): d is string => d !== null))];
+  const vipLines = vips.split("\n").map((line) => line.trim()).filter(Boolean);
+  const invalidVips = vipLines.filter((line) => normaliseVipName(line) === null);
+  const validVips = [...new Map(vipLines.map(normaliseVipName).filter((n): n is string => n !== null).map((n) => [n.toLowerCase(), n])).values()];
   const brokenPivots = pivots.filter((p) => !p.name.trim() || p.types.length === 0 || !isValidTemplate(p.template));
   const update = (index: number, patch: Partial<PivotService>) =>
     setPivots((list) => list.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -64,6 +68,34 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
             </button>
           </section>
 
+          <section aria-labelledby="vip-title">
+            <h2 id="vip-title" className={SECTION_TITLE}>
+              Protected names
+            </h2>
+            <p className="mb-2 text-sm text-muted">
+              People a fraudster would impersonate — executives, finance, HR — one per line, first and last name. Their name
+              on an address outside your organisation&apos;s domains is flagged.
+            </p>
+            <textarea
+              aria-label="Protected names"
+              value={vips}
+              onChange={(e) => setVips(e.target.value)}
+              rows={4}
+              spellCheck={false}
+              placeholder="Claire Martin"
+              className={`${FIELD} w-full`}
+            />
+            {invalidVips.length > 0 && <p className={`${FLAG} text-sm`}>Needs a first and a last name: {invalidVips.join(", ")}</p>}
+            <button
+              type="button"
+              className={`${BUTTON_PRIMARY} mt-2`}
+              disabled={validVips.join("\n") === settings.vipNames.join("\n")}
+              onClick={() => onChange({ ...settings, vipNames: validVips })}
+            >
+              Save names
+            </button>
+          </section>
+
           <section aria-labelledby="ioc-settings-title">
             <h2 id="ioc-settings-title" className={SECTION_TITLE}>
               Indicators
@@ -92,6 +124,7 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
               className={`${BUTTON} mt-2`}
               onClick={() => {
                 setDomains("");
+                setVips("");
                 setPivots(DEFAULT_PIVOTS);
                 onChange({ ...DEFAULT_SETTINGS, theme: settings.theme });
               }}

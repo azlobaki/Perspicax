@@ -98,10 +98,12 @@ export default function LegalNotice() {
             réseau depuis la page.
           </p>
           <p className={PARAGRAPH}>
-            <strong>Stockage local.</strong> Si vous modifiez un réglage (thème, domaines de votre organisation,
-            neutralisation des indicateurs, services de pivot), il est enregistré dans le stockage local de votre
-            navigateur, sous la clé <span className={DATA}>{SETTINGS_KEY}</span>, et nulle part ailleurs. Rien
-            n&apos;est écrit tant que vous ne modifiez pas un réglage. Ce stockage sert uniquement à conserver vos
+            <strong>Stockage local.</strong> Si vous modifiez un réglage (thème, domaines de votre organisation, noms à
+            protéger, neutralisation des indicateurs, services de pivot), il est enregistré dans le stockage local de
+            votre navigateur, sous la clé <span className={DATA}>{SETTINGS_KEY}</span>, et nulle part ailleurs. Rien
+            n&apos;est écrit tant que vous ne modifiez pas un réglage. Les noms à protéger sont des données personnelles
+            que vous saisissez vous-même : ils servent uniquement à la comparaison faite dans votre navigateur et
+            n&apos;en sortent pas. Ce stockage sert uniquement à conserver vos
             préférences d&apos;interface ; vous pouvez l&apos;effacer depuis les réglages (« Reset settings ») ou en
             supprimant les données du site dans votre navigateur. Le site ne dépose aucun cookie et n&apos;utilise
             aucune mesure d&apos;audience ni aucun traceur publicitaire.
