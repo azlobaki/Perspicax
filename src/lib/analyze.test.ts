@@ -47,17 +47,18 @@ test("the clean newsletter: nothing, and its DKIM body hash matches", async () =
   assert.deepEqual(report.dkim.map((c) => c.result), ["match"]);
 });
 
-test("the PayPal lookalike: likely phishing", async () => {
+test("the PayPal lookalike: malicious indicators by score", async () => {
   const { ids, score, band } = await summary("lookalike-paypal.eml");
   assert.deepEqual([...ids].sort(), [
     "html.broken-words",
     "html.password-form",
     "link.hidden",
     "sender.brand-impersonation",
+    "sender.lookalike-domain",
     "url.lookalike",
     "url.shortener",
   ]);
-  assert.deepEqual([score, band], [60, "likely-phishing"]);
+  assert.deepEqual([score, band], [75, "malicious"]);
 });
 
 test("the quishing email: likely phishing", async () => {
@@ -103,4 +104,5 @@ test("the CEO-fraud email: a display name that shows another address, likely phi
   });
   const own = await analyse("bec-display-name.eml", ["rhone-energie.fr"]);
   assert.ok(own.findings.some((f) => f.id === "sender.org-impersonation"));
+  assert.equal(own.findings.find((f) => f.id === "sender.lookalike-domain")?.title, "Sender domain imitates rhone-energie.fr");
 });

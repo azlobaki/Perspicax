@@ -35,7 +35,7 @@
   {
     "file": "lookalike-paypal.eml",
     "expect": [
-      "Likely phishing",
+      "Malicious indicators",
       "Password form inside the email",
       "Lookalike domain",
       "pаypal.com (xn--pypal-4ve.com) imitates paypal.com",

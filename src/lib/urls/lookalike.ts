@@ -1,3 +1,4 @@
+import { BRANDS } from "../data/brands.ts";
 import { orgDomain } from "../net/domain.ts";
 
 /**
@@ -103,4 +104,11 @@ export function lookalikeOf(unicodeHost: string, references: readonly Reference[
     if (refLabel.length >= 5 && editDistance(label, refLabel) <= (refLabel.length >= 9 ? 2 : 1)) return refOrg;
   }
   return null;
+}
+
+const BRAND_REFERENCES: Reference[] = BRANDS.flatMap((brand) => brand.domains.map((domain) => ({ domain, own: false })));
+
+/** What lookalikes are measured against: the organisation's domains, then well-known brands'. */
+export function referencesFor(orgDomains: readonly string[]): Reference[] {
+  return [...orgDomains.map((domain) => ({ domain, own: true })), ...BRAND_REFERENCES];
 }

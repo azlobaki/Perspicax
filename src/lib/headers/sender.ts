@@ -5,6 +5,8 @@ import type { Finding } from "../finding.ts";
 import { parseAddressList, type Address } from "../mime/address.ts";
 import { getHeader, getHeaders } from "../mime/headers.ts";
 import { orgDomain, sameOrg } from "../net/domain.ts";
+import { lookalikeOf, referencesFor } from "../urls/lookalike.ts";
+import { hostToUnicode } from "../urls/punycode.ts";
 
 export type SenderRow = {
   header: "From" | "Sender" | "Reply-To" | "Return-Path" | "Message-ID";
@@ -75,6 +77,25 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[]):
         `Answering this email sends the reply to ${domains}, not to the sender shown` +
         (diverted.some((r) => r.freeMail) ? ", and to a free webmail address." : "."),
       evidence: diverted.map((r) => `Reply-To: ${r.value}`), weight: 8,
+    });
+  }
+
+  // An attacker who registers a lookalike domain passes SPF, DKIM and DMARC:
+  // the domain itself is the tell.
+  const references = referencesFor(orgDomains);
+  const imitations = info.rows
+    .filter((row) => row.header !== "Message-ID" && row.domain !== null && !row.freeMail)
+    .map((row) => ({ row, imitates: lookalikeOf(hostToUnicode(row.domain as string), references) }))
+    .filter((x): x is { row: SenderRow; imitates: string } => x.imitates !== null);
+  if (imitations.length > 0) {
+    const reads = (domain: string) => (hostToUnicode(domain) !== domain ? ` (reads as ${hostToUnicode(domain)})` : "");
+    findings.push({
+      id: "sender.lookalike-domain", category: "sender", severity: "high",
+      title: `Sender domain imitates ${[...new Set(imitations.map((x) => x.imitates))].join(", ")}`,
+      explanation:
+        "The address is at a domain built to be mistaken for a familiar one — your organisation's or a well-known brand's. Its owner can make it pass SPF, DKIM and DMARC.",
+      evidence: [...new Set(imitations.map(({ row }) => `${row.header}: ${row.value}${reads(row.domain as string)}`))],
+      weight: 15,
     });
   }
 

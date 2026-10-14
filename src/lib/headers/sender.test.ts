@@ -59,11 +59,34 @@ test("flags brand impersonation, not the brand itself", () => {
 
 test("flags a display name imitating the organisation", () => {
   const info = senderInfo(headers({ From: '"Rhône Énergie Facturation" <billing@rhone-energie-paiement.com>' }));
-  assert.deepEqual(senderFindings(info, ["rhone-energie.fr"]).map((f) => f.id), ["sender.org-impersonation"]);
+  assert.deepEqual(senderFindings(info, ["rhone-energie.fr"]).map((f) => f.id), ["sender.lookalike-domain", "sender.org-impersonation"]);
   assert.deepEqual(senderFindings(info, []), []);
 });
 
 test("flags missing or multiple From addresses", () => {
   assert.deepEqual(senderFindings(senderInfo(headers({ Subject: "x" })), []).map((f) => f.id), ["sender.no-from"]);
   assert.deepEqual(senderFindings(senderInfo(headers({ From: "a@x.com, b@y.com" })), []).map((f) => f.id), ["sender.multiple-from"]);
+});
+
+test("flags a sender domain that imitates the organisation's or a brand's", () => {
+  const bec = senderInfo(headers({
+    From: '"pdg@rhone-energie.fr" <pdg@rhone-energie-direction.com>',
+    "Return-Path": "<pdg@rhone-energie-direction.com>",
+  }));
+  const own = senderFindings(bec, ["rhone-energie.fr"]).find((f) => f.id === "sender.lookalike-domain");
+  assert.equal(own?.title, "Sender domain imitates rhone-energie.fr");
+  assert.equal(own?.severity, "high");
+  assert.deepEqual(own?.evidence, ["From: pdg@rhone-energie-direction.com", "Return-Path: pdg@rhone-energie-direction.com"]);
+  // Without the organisation's domain configured there is nothing to compare with.
+  assert.equal(senderFindings(bec, []).find((f) => f.id === "sender.lookalike-domain"), undefined);
+
+  const paypal = senderFindings(senderInfo(headers({ From: "PayPal <service@xn--pypal-4ve.com>" })), []);
+  assert.deepEqual(paypal.find((f) => f.id === "sender.lookalike-domain")?.evidence, ["From: service@xn--pypal-4ve.com (reads as pаypal.com)"]);
+});
+
+test("leaves real brand domains, the organisation itself and free mail alone", () => {
+  for (const from of ["Microsoft <no-reply@email.microsoft.com>", "Facturation <facturation@rhone-energie.fr>", "Claire <claire@outlook.fr>"]) {
+    const findings = senderFindings(senderInfo(headers({ From: from })), ["rhone-energie.fr"]);
+    assert.equal(findings.find((f) => f.id === "sender.lookalike-domain"), undefined, from);
+  }
 });

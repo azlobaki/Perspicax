@@ -1,5 +1,4 @@
 import { analyzeAttachments, attachmentFindings, type AttachmentReport, type ImageDecoder } from "./attachments/analyze.ts";
-import { BRANDS } from "./data/brands.ts";
 import { dkimChecks, dkimFindings, type DkimCheck } from "./dkim/bodyhash.ts";
 import type { ParsedEmail } from "./email.ts";
 import { sortFindings, type Finding } from "./finding.ts";
@@ -7,7 +6,7 @@ import { analyzeHeaders, type HeaderReport } from "./headers/analyze.ts";
 import { collectIocs, type Ioc } from "./ioc/collect.ts";
 import { analyzeLinks, type LinkReport } from "./links/analyze.ts";
 import { scoreFindings, type Score } from "./score/score.ts";
-import type { Reference } from "./urls/lookalike.ts";
+import { referencesFor } from "./urls/lookalike.ts";
 
 export type EmailReport = {
   headers: HeaderReport;
@@ -29,14 +28,12 @@ export type AnalyzeOptions = {
   decodeImage?: ImageDecoder;
 };
 
-const BRAND_REFERENCES: Reference[] = BRANDS.flatMap((brand) => brand.domains.map((domain) => ({ domain, own: false })));
-
 /** Asynchronous because hashing (WebCrypto) and image decoding are. */
 export async function analyzeEmail(email: ParsedEmail, options: AnalyzeOptions): Promise<EmailReport> {
   const headers = analyzeHeaders(email, { orgDomains: options.orgDomains });
   const attachments = await analyzeAttachments(email.attachments, { decodeImage: options.decodeImage });
   const dkim = await dkimChecks(email);
-  const references = [...options.orgDomains.map((domain) => ({ domain, own: true })), ...BRAND_REFERENCES];
+  const references = referencesFor(options.orgDomains);
   const links = analyzeLinks(
     email,
     email.html ? options.parseHtml(email.html) : null,
