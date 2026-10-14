@@ -9,6 +9,7 @@ import ReportView from "@/components/ReportView";
 import SettingsPanel from "@/components/SettingsPanel";
 import TopBar, { type FileMeta } from "@/components/TopBar";
 import { LocaleProvider } from "@/i18n/LocaleContext";
+import { messages } from "@/i18n/messages";
 import { useSettings } from "@/hooks/useSettings";
 import { analyzeEmail, type EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
@@ -49,7 +50,7 @@ export default function Home() {
       setError(null);
       setShowSettings(false);
     } catch (err) {
-      setError(failure("Could not read this email: ", "Impossible de lire cet e-mail : ", err));
+      setError(failure("Could not read this email: ", "Impossible de lire cet e-mail\u00a0: ", err));
     }
   }, []);
 
@@ -67,7 +68,7 @@ export default function Home() {
         if (!cancelled) setResult({ id: current.id, report });
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(failure("Analysis failed: ", "Échec de l’analyse : ", err));
+        if (!cancelled) setError(failure("Analysis failed: ", "Échec de l’analyse\u00a0: ", err));
       });
     return () => {
       cancelled = true;
@@ -135,7 +136,7 @@ export default function Home() {
     main = (
       <main className="flex-1 px-4 py-8 sm:px-6">
         <p role={error ? "alert" : "status"} className={error ? "font-semibold text-signal-fg" : "text-muted"}>
-          {error ? error[locale] : "Analysing…"}
+          {error ? error[locale] : messages[locale].page.analysing}
         </p>
       </main>
     );
@@ -145,7 +146,7 @@ export default function Home() {
         dragging={dragging}
         error={error ? error[locale] : null}
         onFile={(file) => void openFile(file)}
-        onHeaders={(text) => load(() => parseHeadersOnly(text), "Pasted headers", new TextEncoder().encode(text).length)}
+        onHeaders={(text) => load(() => parseHeadersOnly(text), messages[locale].page.pastedHeaders, new TextEncoder().encode(text).length)}
       />
     );
   }

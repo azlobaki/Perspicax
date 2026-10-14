@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/LocaleContext";
 import { SMALL_BUTTON } from "./ui";
 
-export default function CopyButton({ text, label = "Copy" }: { text: string | (() => string); label?: string }) {
+export default function CopyButton({ text, label }: { text: string | (() => string); label?: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -19,7 +21,7 @@ export default function CopyButton({ text, label = "Copy" }: { text: string | ((
         }
       }}
     >
-      {copied ? "Copied" : label}
+      {copied ? t.copy.copied : (label ?? t.copy.copy)}
     </button>
   );
 }

@@ -44,7 +44,7 @@ export default function TopBar({
           <div>
             <dt className={LABEL}>{t.topBar.sizeParse}</dt>
             <dd className="tabular-nums">
-              {formatSize(file.size)} · {file.parseMs} ms
+              {formatSize(file.size, locale)} · {file.parseMs} ms
             </dd>
           </div>
         </dl>

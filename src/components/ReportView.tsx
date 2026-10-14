@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePick } from "@/i18n/LocaleContext";
+import { usePick, useT } from "@/i18n/LocaleContext";
 import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { formatUtc } from "@/lib/format";
@@ -31,6 +31,7 @@ export default function ReportView({ email, report, file, defang, pivots }: {
   pivots: PivotService[];
 }) {
   const pick = usePick();
+  const t = useT();
   const [tab, setTab] = useState<TabId>("headers");
   const headers = report.headers;
   const from = headers.sender.from;
@@ -42,12 +43,12 @@ export default function ReportView({ email, report, file, defang, pivots }: {
         <VerdictStamp score={report.score} />
         <div className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-12">
           <VerdictBlock score={report.score} />
-          <p className={`${LABEL} mt-6 console:mt-3 dossier:mt-0`}>Subject</p>
+          <p className={`${LABEL} mt-6 console:mt-3 dossier:mt-0`}>{t.report.subject}</p>
           <h1 className="mt-1 font-display text-2xl leading-tight font-bold tracking-tight console:text-sm console:font-medium console:tracking-normal dossier:sm:pr-56 dossier:text-[1.6rem] dossier:font-semibold dossier:before:content-['«_'] dossier:after:content-['_»']">
-            {headers.subject || "(no subject)"}
+            {headers.subject || t.report.noSubject}
           </h1>
           <dl className="mt-4 grid grid-cols-[5rem_minmax(0,1fr)] gap-y-1 text-sm console:mt-2 console:grid-cols-[9ch_minmax(0,1fr)] console:gap-y-0 console:text-xs dossier:gap-y-0 dossier:border-t dossier:border-hairline dossier:*:border-b dossier:*:border-hairline dossier:*:py-1">
-            <dt className={LABEL}>From</dt>
+            <dt className={LABEL}>{t.report.from}</dt>
             <dd className="break-all">
               {from ? (
                 <>
@@ -58,15 +59,15 @@ export default function ReportView({ email, report, file, defang, pivots }: {
                 "—"
               )}
             </dd>
-            <dt className={LABEL}>To</dt>
+            <dt className={LABEL}>{t.report.to}</dt>
             <dd className={`${DATA} break-all`}>{to ? decodeEncodedWords(to) : "—"}</dd>
-            <dt className={LABEL}>Date</dt>
+            <dt className={LABEL}>{t.report.date}</dt>
             <dd className="tabular-nums">{headers.date ? formatUtc(headers.date) : "—"}</dd>
           </dl>
           {email.warnings.length > 0 && (
             <details className="mt-3 text-sm text-muted">
               <summary className="cursor-pointer">
-                {email.warnings.length} parsing {email.warnings.length === 1 ? "warning" : "warnings"}
+                {t.report.warnings(email.warnings.length)}
               </summary>
               <ul className="mt-1 list-inside list-disc">
                 {email.warnings.map((warning, i) => (
@@ -83,14 +84,14 @@ export default function ReportView({ email, report, file, defang, pivots }: {
       </div>
 
       <Tabs
-        label="Report sections"
+        label={t.tabs.sections}
         tabs={[
-          { id: "headers", label: "Headers" },
-          { id: "links", label: "Links", count: report.links.links.filter(isClickable).length },
-          { id: "attachments", label: "Attachments", count: report.attachments.length },
-          { id: "iocs", label: "IOCs", count: report.iocs.length },
-          { id: "preview", label: "Safe preview" },
-          { id: "raw", label: "Raw source" },
+          { id: "headers", label: t.tabs.headers },
+          { id: "links", label: t.tabs.links, count: report.links.links.filter(isClickable).length },
+          { id: "attachments", label: t.tabs.attachments, count: report.attachments.length },
+          { id: "iocs", label: t.tabs.iocs, count: report.iocs.length },
+          { id: "preview", label: t.tabs.preview },
+          { id: "raw", label: t.tabs.raw },
         ]}
         active={tab}
         onChange={setTab}

@@ -1,17 +1,18 @@
-import { usePick } from "@/i18n/LocaleContext";
+import { usePick, useT } from "@/i18n/LocaleContext";
 import type { Finding } from "@/lib/finding";
 import SeverityTag from "./SeverityTag";
 import { DATA, SECTION_TITLE } from "./ui";
 
 export default function FindingsPanel({ findings }: { findings: Finding[] }) {
   const pick = usePick();
+  const t = useT();
   return (
     <section aria-labelledby="findings-title">
       <h2 id="findings-title" className={SECTION_TITLE}>
-        Findings · {findings.length}
+        {t.findings.heading(findings.length)}
       </h2>
       {findings.length === 0 ? (
-        <p className="text-muted">No finding.</p>
+        <p className="text-muted">{t.findings.none}</p>
       ) : (
         <ol className="border-t border-rule console:border-t-0 dossier:border-t-0">
           {findings.map((finding, i) => (
