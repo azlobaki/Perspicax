@@ -206,8 +206,11 @@ function evidenceLine(entry: AuthEntry): string {
 export function authFindings(summary: AuthSummary, fromDomain: string | null, orgDomains: readonly string[]): Finding[] {
   if (summary.entries.length === 0) {
     return [{
-      id: "auth.missing", category: "auth", severity: "info", title: "No authentication results",
-      explanation: "No receiving server recorded SPF, DKIM or DMARC results in these headers, so the sender's identity was not checked here.",
+      id: "auth.missing", category: "auth", severity: "info", title: { en: "No authentication results", fr: "Aucun résultat d’authentification" },
+      explanation: {
+        en: "No receiving server recorded SPF, DKIM or DMARC results in these headers, so the sender's identity was not checked here.",
+        fr: "Aucun serveur de réception n’a consigné de résultat SPF, DKIM ou DMARC dans ces en-têtes\u00a0: l’identité de l’expéditeur n’a donc pas pu être vérifiée ici.",
+      },
       evidence: [], weight: 0,
     }];
   }
@@ -222,10 +225,17 @@ export function authFindings(summary: AuthSummary, fromDomain: string | null, or
     const own = domain !== null && orgDomains.some((d) => sameOrg(d, domain));
     return [{
       id: "auth.dmarc-fail", category: "auth", severity: "high",
-      title: own ? "Sender authentication failed for your own domain" : `DMARC failed for ${domain ?? "the sender's domain"}`,
-      explanation:
-        `The receiving server checked ${domain ?? "the From domain"} against its DMARC policy and the message failed: neither SPF nor DKIM proved it came from that domain.` +
-        (own ? " The From address claims to be your organisation, which is the classic spoofing setup." : ""),
+      title: own
+        ? { en: "Sender authentication failed for your own domain", fr: "Échec d’authentification de l’expéditeur pour votre propre domaine" }
+        : { en: `DMARC failed for ${domain ?? "the sender's domain"}`, fr: `Échec DMARC pour ${domain ?? "le domaine de l’expéditeur"}` },
+      explanation: {
+        en:
+          `The receiving server checked ${domain ?? "the From domain"} against its DMARC policy and the message failed: neither SPF nor DKIM proved it came from that domain.` +
+          (own ? " The From address claims to be your organisation, which is the classic spoofing setup." : ""),
+        fr:
+          `Le serveur de réception a vérifié ${domain ?? "le domaine de l’adresse From"} au regard de sa politique DMARC et le message a échoué\u00a0: ni SPF ni DKIM n’ont prouvé qu’il provenait de ce domaine.` +
+          (own ? " L’adresse From se fait passer pour votre organisation, ce qui est le schéma classique de l’usurpation." : ""),
+      },
       evidence: [dmarc, spf, ...dkims, compauth].filter((e): e is AuthEntry => e !== undefined).map(evidenceLine),
       weight: own ? 25 : 18,
     }];
@@ -236,23 +246,34 @@ export function authFindings(summary: AuthSummary, fromDomain: string | null, or
     const hard = spf.result === "fail";
     findings.push({
       id: `auth.spf-${spf.result}`, category: "auth", severity: hard ? "medium" : "low",
-      title: hard ? "SPF failed" : "SPF soft-failed",
-      explanation: "The server that delivered the message is not on the list of servers allowed to send for the envelope sender's domain.",
+      title: hard
+        ? { en: "SPF failed", fr: "Échec SPF" }
+        : { en: "SPF soft-failed", fr: "Échec SPF atténué (softfail)" },
+      explanation: {
+        en: "The server that delivered the message is not on the list of servers allowed to send for the envelope sender's domain.",
+        fr: "Le serveur qui a remis le message ne figure pas dans la liste des serveurs autorisés à envoyer pour le domaine de l’expéditeur d’enveloppe.",
+      },
       evidence: [evidenceLine(spf)], weight: hard ? 10 : 4,
     });
   }
   const broken = dkims.filter((e) => e.result === "fail" || e.result === "permerror");
   if (broken.length > 0) {
     findings.push({
-      id: "auth.dkim-fail", category: "auth", severity: "medium", title: "DKIM signature did not verify",
-      explanation: "The message was signed, but the signature no longer matches: it was altered after signing, or the signature is forged.",
+      id: "auth.dkim-fail", category: "auth", severity: "medium", title: { en: "DKIM signature did not verify", fr: "La signature DKIM n’est pas valide" },
+      explanation: {
+        en: "The message was signed, but the signature no longer matches: it was altered after signing, or the signature is forged.",
+        fr: "Le message était signé, mais la signature ne correspond plus\u00a0: il a été modifié après la signature, ou la signature est falsifiée.",
+      },
       evidence: broken.map(evidenceLine), weight: 8,
     });
   }
   if (compauth?.result === "fail") {
     findings.push({
-      id: "auth.compauth-fail", category: "auth", severity: "medium", title: "Microsoft composite authentication failed",
-      explanation: "Microsoft 365 combined SPF, DKIM, DMARC and its own signals and could not confirm the sender.",
+      id: "auth.compauth-fail", category: "auth", severity: "medium", title: { en: "Microsoft composite authentication failed", fr: "Échec de l’authentification composite Microsoft" },
+      explanation: {
+        en: "Microsoft 365 combined SPF, DKIM, DMARC and its own signals and could not confirm the sender.",
+        fr: "Microsoft 365 a combiné SPF, DKIM, DMARC et ses propres signaux, et n’a pas pu confirmer l’expéditeur.",
+      },
       evidence: [evidenceLine(compauth)], weight: 10,
     });
   }

@@ -4,7 +4,7 @@ import type { Finding, FindingCategory } from "../finding.ts";
 import { scoreFindings } from "./score.ts";
 
 const finding = (id: string, category: FindingCategory, weight: number): Finding => ({
-  id, category, severity: "medium", title: id, explanation: "", evidence: [], weight,
+  id, category, severity: "medium", title: { en: id, fr: id }, explanation: { en: "", fr: "" }, evidence: [], weight,
 });
 
 test("caps each category, then the total", () => {

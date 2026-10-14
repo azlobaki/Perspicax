@@ -48,8 +48,8 @@ export function reportMarkdown(input: ReportInput): string {
   out.push(`## Findings (${report.findings.length})`, "");
   if (report.findings.length === 0) out.push("No finding.");
   report.findings.forEach((finding, i) => {
-    out.push(`${i + 1}. **${finding.title}** — ${SEVERITY_LABEL[finding.severity]}, +${finding.weight}`);
-    out.push(`   ${finding.explanation}`);
+    out.push(`${i + 1}. **${finding.title.en}** — ${SEVERITY_LABEL[finding.severity]}, +${finding.weight}`);
+    out.push(`   ${finding.explanation.en}`);
     for (const line of finding.evidence) out.push(`   - ${code(safe(line))}`);
   });
   out.push("");

@@ -1,6 +1,7 @@
 import { isKnownTracker } from "../data/trackers.ts";
 import type { ParsedEmail } from "../email.ts";
 import type { Finding, Severity } from "../finding.ts";
+import type { Text } from "../i18n/text.ts";
 import { extractHtml, type HtmlForm, type HtmlLink, type HtmlOrigin } from "../html/extract.ts";
 import { sameOrg } from "../net/domain.ts";
 import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts";
@@ -109,31 +110,64 @@ export function analyzeLinks(
   return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context) };
 }
 
-type FlagRule = { flag: UrlFlag; severity: Severity; weight: number; title: string; explanation: string };
+type FlagRule = { flag: UrlFlag; severity: Severity; weight: number; title: Text; explanation: Text };
 
 const FLAG_RULES: FlagRule[] = [
-  { flag: "lookalike", severity: "high", weight: 18, title: "Lookalike domain",
-    explanation: "A link goes to a domain built to be mistaken for a known one." },
-  { flag: "homoglyph", severity: "high", weight: 15, title: "Domain uses look-alike characters",
-    explanation: "Letters from another alphabet stand in for Latin ones, so the domain reads like a familiar name." },
-  { flag: "javascript-url", severity: "high", weight: 15, title: "Link runs a script",
-    explanation: "A javascript: link executes code instead of opening a page." },
-  { flag: "data-url", severity: "high", weight: 12, title: "Link opens embedded content",
-    explanation: "A data: link carries a whole page inside the email, out of reach of URL filters." },
-  { flag: "userinfo", severity: "high", weight: 15, title: "Destination hidden behind a user name",
-    explanation: "Everything before @ in a link is a user name, not the site: the real destination comes after it." },
-  { flag: "disguised-domain", severity: "high", weight: 15, title: "Domain disguised as a subdomain",
-    explanation: "The link starts with a familiar domain, but that is only a subdomain of another one." },
-  { flag: "ip-host", severity: "medium", weight: 8, title: "Link to a bare IP address",
-    explanation: "Legitimate senders link to named sites; a raw IP address avoids domain reputation checks." },
-  { flag: "shortener", severity: "low", weight: 4, title: "Shortened link",
-    explanation: "A URL shortener hides the destination until the link is followed." },
-  { flag: "abused-tld", severity: "low", weight: 3, title: "Top-level domain favoured by abuse",
-    explanation: "The domain ends in a TLD that abuse reports single out. A weak signal by itself." },
-  { flag: "punycode", severity: "info", weight: 0, title: "Internationalised domain",
-    explanation: "The domain contains non-ASCII letters. Check how it reads." },
-  { flag: "opaque-wrapper", severity: "info", weight: 0, title: "Link rewritten by a gateway",
-    explanation: "A security gateway rewrote the link in a way that cannot be reversed offline; its destination is unknown here." },
+  { flag: "lookalike", severity: "high", weight: 18, title: { en: "Lookalike domain", fr: "Domaine sosie" },
+    explanation: {
+      en: "A link goes to a domain built to be mistaken for a known one.",
+      fr: "Un lien mène à un domaine conçu pour être pris pour un domaine connu.",
+    } },
+  { flag: "homoglyph", severity: "high", weight: 15, title: { en: "Domain uses look-alike characters", fr: "Domaine aux caractères trompeurs" },
+    explanation: {
+      en: "Letters from another alphabet stand in for Latin ones, so the domain reads like a familiar name.",
+      fr: "Des lettres d’un autre alphabet remplacent des lettres latines, si bien que le domaine se lit comme un nom familier.",
+    } },
+  { flag: "javascript-url", severity: "high", weight: 15, title: { en: "Link runs a script", fr: "Le lien exécute un script" },
+    explanation: {
+      en: "A javascript: link executes code instead of opening a page.",
+      fr: "Un lien javascript: exécute du code au lieu d’ouvrir une page.",
+    } },
+  { flag: "data-url", severity: "high", weight: 12, title: { en: "Link opens embedded content", fr: "Le lien ouvre un contenu intégré" },
+    explanation: {
+      en: "A data: link carries a whole page inside the email, out of reach of URL filters.",
+      fr: "Un lien data: transporte une page entière dans l’e-mail, hors de portée des filtres d’URL.",
+    } },
+  { flag: "userinfo", severity: "high", weight: 15, title: { en: "Destination hidden behind a user name", fr: "Destination masquée derrière un nom d’utilisateur" },
+    explanation: {
+      en: "Everything before @ in a link is a user name, not the site: the real destination comes after it.",
+      fr: "Tout ce qui précède @ dans un lien est un nom d’utilisateur, pas le site\u00a0: la vraie destination vient après.",
+    } },
+  { flag: "disguised-domain", severity: "high", weight: 15, title: { en: "Domain disguised as a subdomain", fr: "Domaine déguisé en sous-domaine" },
+    explanation: {
+      en: "The link starts with a familiar domain, but that is only a subdomain of another one.",
+      fr: "Le lien commence par un domaine familier, mais ce n’est qu’un sous-domaine d’un autre domaine.",
+    } },
+  { flag: "ip-host", severity: "medium", weight: 8, title: { en: "Link to a bare IP address", fr: "Lien vers une adresse IP brute" },
+    explanation: {
+      en: "Legitimate senders link to named sites; a raw IP address avoids domain reputation checks.",
+      fr: "Les expéditeurs légitimes pointent vers des sites nommés\u00a0; une adresse IP brute échappe aux contrôles de réputation des domaines.",
+    } },
+  { flag: "shortener", severity: "low", weight: 4, title: { en: "Shortened link", fr: "Lien raccourci" },
+    explanation: {
+      en: "A URL shortener hides the destination until the link is followed.",
+      fr: "Un raccourcisseur d’URL cache la destination tant que le lien n’est pas suivi.",
+    } },
+  { flag: "abused-tld", severity: "low", weight: 3, title: { en: "Top-level domain favoured by abuse", fr: "Domaine de premier niveau prisé des abus" },
+    explanation: {
+      en: "The domain ends in a TLD that abuse reports single out. A weak signal by itself.",
+      fr: "Le domaine se termine par un TLD que les signalements d’abus mettent en avant. Un signal faible en soi.",
+    } },
+  { flag: "punycode", severity: "info", weight: 0, title: { en: "Internationalised domain", fr: "Domaine internationalisé" },
+    explanation: {
+      en: "The domain contains non-ASCII letters. Check how it reads.",
+      fr: "Le domaine contient des lettres non ASCII. Vérifiez comment il se lit.",
+    } },
+  { flag: "opaque-wrapper", severity: "info", weight: 0, title: { en: "Link rewritten by a gateway", fr: "Lien réécrit par une passerelle" },
+    explanation: {
+      en: "A security gateway rewrote the link in a way that cannot be reversed offline; its destination is unknown here.",
+      fr: "Une passerelle de sécurité a réécrit le lien d’une façon irréversible hors ligne\u00a0; sa destination est inconnue ici.",
+    } },
 ];
 
 const unique = (items: string[]) => [...new Set(items)].slice(0, 10);
@@ -157,8 +191,11 @@ function linkFindings(
   const deceptive = clickable.filter((l) => l.shownHost);
   if (deceptive.length > 0) {
     findings.push({
-      id: "link.deceptive", category: "link", severity: "high", title: "Link text shows another destination",
-      explanation: "The text of a link displays one address while the link goes somewhere else. Readers trust what they see.",
+      id: "link.deceptive", category: "link", severity: "high", title: { en: "Link text shows another destination", fr: "Le texte du lien montre une autre destination" },
+      explanation: {
+        en: "The text of a link displays one address while the link goes somewhere else. Readers trust what they see.",
+        fr: "Le texte d’un lien affiche une adresse alors que le lien mène ailleurs. Les lecteurs se fient à ce qu’ils voient.",
+      },
       evidence: unique(deceptive.map((l) => `"${l.text}" → ${destination(l)}`)), weight: 20,
     });
   }
@@ -176,8 +213,11 @@ function linkFindings(
   const hidden = clickable.filter((l) => l.hidden !== null);
   if (hidden.length > 0) {
     findings.push({
-      id: "link.hidden", category: "link", severity: "medium", title: "Hidden links",
-      explanation: "Links the reader cannot see are there for filters and crawlers, not for people.",
+      id: "link.hidden", category: "link", severity: "medium", title: { en: "Hidden links", fr: "Liens cachés" },
+      explanation: {
+        en: "Links the reader cannot see are there for filters and crawlers, not for people.",
+        fr: "Les liens que le lecteur ne voit pas sont destinés aux filtres et aux robots d’indexation, pas aux personnes.",
+      },
       evidence: unique(hidden.map((l) => `${destination(l)} (${l.hidden})`)), weight: 6,
     });
   }
@@ -187,8 +227,11 @@ function linkFindings(
   );
   if (pixels.length > 0) {
     findings.push({
-      id: "html.tracking-pixel", category: "html", severity: "low", title: "Tracking pixel",
-      explanation: "An invisible image tells its server when the email is opened, confirming the address is read. The safe preview never loads it.",
+      id: "html.tracking-pixel", category: "html", severity: "low", title: { en: "Tracking pixel", fr: "Pixel de suivi" },
+      explanation: {
+        en: "An invisible image tells its server when the email is opened, confirming the address is read. The safe preview never loads it.",
+        fr: "Une image invisible indique à son serveur quand l’e-mail est ouvert, ce qui confirme que l’adresse est lue. L’aperçu sécurisé ne la charge jamais.",
+      },
       evidence: unique(pixels.map(destination)), weight: 4,
     });
   }
@@ -199,30 +242,46 @@ function linkFindings(
   if (passwordForms.length > 0) {
     findings.push({
       id: "html.password-form", category: "html", severity: "high",
-      title: passwordForms.every((f) => f.attachment) ? "Password form in an attachment" : "Password form inside the email",
-      explanation: "The message asks for a password in a form of its own. No legitimate service collects credentials that way.",
+      title: passwordForms.every((f) => f.attachment)
+        ? { en: "Password form in an attachment", fr: "Formulaire de mot de passe dans une pièce jointe" }
+        : { en: "Password form inside the email", fr: "Formulaire de mot de passe dans l’e-mail" },
+      explanation: {
+        en: "The message asks for a password in a form of its own. No legitimate service collects credentials that way.",
+        fr: "Le message demande un mot de passe dans un formulaire qui lui est propre. Aucun service légitime ne collecte des identifiants de cette façon.",
+      },
       evidence: formEvidence(passwordForms), weight: 18,
     });
   } else if (forms.length > 0) {
     findings.push({
       id: "html.form", category: "html", severity: "medium",
-      title: forms.every((f) => f.attachment) ? "Form in an attachment" : "Form inside the email",
-      explanation: "The message contains a form that sends what is typed into it to a server.",
+      title: forms.every((f) => f.attachment)
+        ? { en: "Form in an attachment", fr: "Formulaire dans une pièce jointe" }
+        : { en: "Form inside the email", fr: "Formulaire dans l’e-mail" },
+      explanation: {
+        en: "The message contains a form that sends what is typed into it to a server.",
+        fr: "Le message contient un formulaire qui envoie à un serveur ce qui y est saisi.",
+      },
       evidence: formEvidence(forms), weight: 10,
     });
   }
 
   if (brokenWords.length >= 2) {
     findings.push({
-      id: "html.broken-words", category: "html", severity: "low", title: "Words broken by invisible characters",
-      explanation: "Invisible characters inside words defeat keyword filters while the text still reads normally.",
+      id: "html.broken-words", category: "html", severity: "low", title: { en: "Words broken by invisible characters", fr: "Mots coupés par des caractères invisibles" },
+      explanation: {
+        en: "Invisible characters inside words defeat keyword filters while the text still reads normally.",
+        fr: "Des caractères invisibles au milieu des mots déjouent les filtres de mots-clés alors que le texte se lit normalement.",
+      },
       evidence: unique(brokenWords), weight: 4,
     });
   }
   if (bidiOverrides > 0) {
     findings.push({
-      id: "html.bidi-override", category: "html", severity: "medium", title: "Text direction overrides",
-      explanation: "Direction-override characters make text display in a different order than it is written, a trick used to disguise names and links.",
+      id: "html.bidi-override", category: "html", severity: "medium", title: { en: "Text direction overrides", fr: "Inversions du sens d’écriture" },
+      explanation: {
+        en: "Direction-override characters make text display in a different order than it is written, a trick used to disguise names and links.",
+        fr: "Des caractères de contrôle du sens d’écriture font s’afficher le texte dans un autre ordre que celui où il est écrit, une astuce pour déguiser des noms et des liens.",
+      },
       evidence: [`${bidiOverrides} override character${bidiOverrides === 1 ? "" : "s"} in the visible text`], weight: 6,
     });
   }

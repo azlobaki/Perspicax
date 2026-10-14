@@ -214,17 +214,33 @@ export function vendorFindings(verdicts: readonly VendorVerdict[]): Finding[] {
     const base = { id, category: "vendor" as const, evidence };
     switch (v.verdict) {
       case "phishing":
-        return [{ ...base, severity: "high", title: `${v.vendor} classified it as phishing`,
-          explanation: "The mail filter this message went through flagged it as phishing when it arrived.", weight: 15 }];
+        return [{ ...base, severity: "high",
+          title: { en: `${v.vendor} classified it as phishing`, fr: `${v.vendor} l’a classé comme hameçonnage` },
+          explanation: {
+            en: "The mail filter this message went through flagged it as phishing when it arrived.",
+            fr: "La passerelle de messagerie traversée par ce message l’a signalé comme hameçonnage à son arrivée.",
+          }, weight: 15 }];
       case "malware":
-        return [{ ...base, severity: "high", title: `${v.vendor} detected malware`,
-          explanation: "The mail filter this message went through found malware in it.", weight: 20 }];
+        return [{ ...base, severity: "high",
+          title: { en: `${v.vendor} detected malware`, fr: `${v.vendor} a détecté un logiciel malveillant` },
+          explanation: {
+            en: "The mail filter this message went through found malware in it.",
+            fr: "La passerelle de messagerie traversée par ce message y a trouvé un logiciel malveillant.",
+          }, weight: 20 }];
       case "spam":
-        return [{ ...base, severity: "medium", title: `${v.vendor} classified it as spam`,
-          explanation: "The mail filter this message went through scored it as spam.", weight: 6 }];
+        return [{ ...base, severity: "medium",
+          title: { en: `${v.vendor} classified it as spam`, fr: `${v.vendor} l’a classé comme spam` },
+          explanation: {
+            en: "The mail filter this message went through scored it as spam.",
+            fr: "La passerelle de messagerie traversée par ce message l’a évalué comme spam.",
+          }, weight: 6 }];
       case "bulk":
-        return [{ ...base, severity: "info", title: `${v.vendor} classified it as bulk mail`,
-          explanation: "Bulk mail is marketing or notifications sent in volume. Not malicious by itself.", weight: 0 }];
+        return [{ ...base, severity: "info",
+          title: { en: `${v.vendor} classified it as bulk mail`, fr: `${v.vendor} l’a classé comme envoi en masse` },
+          explanation: {
+            en: "Bulk mail is marketing or notifications sent in volume. Not malicious by itself.",
+            fr: "Un envoi en masse est un message marketing ou une notification expédié en volume. Il n’est pas malveillant en soi.",
+          }, weight: 0 }];
       default:
         return [];
     }

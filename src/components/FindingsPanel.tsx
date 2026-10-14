@@ -1,8 +1,10 @@
+import { usePick } from "@/i18n/LocaleContext";
 import type { Finding } from "@/lib/finding";
 import SeverityTag from "./SeverityTag";
 import { DATA, SECTION_TITLE } from "./ui";
 
 export default function FindingsPanel({ findings }: { findings: Finding[] }) {
+  const pick = usePick();
   return (
     <section aria-labelledby="findings-title">
       <h2 id="findings-title" className={SECTION_TITLE}>
@@ -23,8 +25,8 @@ export default function FindingsPanel({ findings }: { findings: Finding[] }) {
               </span>
               <SeverityTag severity={finding.severity} />
               <div className="min-w-0">
-                <p className="font-bold console:font-normal dossier:font-semibold">{finding.title}</p>
-                <p className="text-muted console:text-xs">{finding.explanation}</p>
+                <p className="font-bold console:font-normal dossier:font-semibold">{pick(finding.title)}</p>
+                <p className="text-muted console:text-xs">{pick(finding.explanation)}</p>
                 {finding.evidence.length > 0 && (
                   <ul className="mt-1">
                     {finding.evidence.map((line) => (

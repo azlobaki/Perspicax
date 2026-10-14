@@ -106,7 +106,7 @@ const summaryOf = (value: string): AuthSummary => ({
 test("reports a DMARC failure once, heavier on the organisation's own domain", () => {
   const own = authFindings(summaryOf(MICROSOFT), "rhone-energie.fr", ["rhone-energie.fr"]);
   assert.deepEqual(own.map((f) => [f.id, f.severity, f.weight]), [["auth.dmarc-fail", "high", 25]]);
-  assert.match(own[0].title, /your own domain/);
+  assert.match(own[0].title.en, /your own domain/);
   assert.ok(own[0].evidence.includes("dmarc=fail action=quarantine header.from=rhone-energie.fr"));
   const other = authFindings(summaryOf(MICROSOFT), "rhone-energie.fr", []);
   assert.equal(other[0].weight, 18);

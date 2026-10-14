@@ -83,9 +83,11 @@ export function dkimFindings(checks: readonly DkimCheck[]): Finding[] {
   const changed = checks.filter((check) => check.result === "mismatch");
   if (changed.length === 0) return [];
   return [{
-    id: "dkim.body-modified", category: "auth", severity: "medium", title: "Body changed after signing",
-    explanation:
-      "The body hash in the DKIM signature does not match this file's body: the content was altered after the sender signed it — by a gateway adding a banner, by forwarding, or by tampering.",
+    id: "dkim.body-modified", category: "auth", severity: "medium", title: { en: "Body changed after signing", fr: "Corps modifié après la signature" },
+    explanation: {
+      en: "The body hash in the DKIM signature does not match this file's body: the content was altered after the sender signed it — by a gateway adding a banner, by forwarding, or by tampering.",
+      fr: "L’empreinte du corps dans la signature DKIM ne correspond pas au corps de ce fichier\u00a0: le contenu a été altéré après la signature de l’expéditeur, par une passerelle qui ajoute un bandeau, par un transfert ou par une falsification.",
+    },
     evidence: changed.map((c) => `d=${c.signature.domain} s=${c.signature.selector} c=${c.signature.headerCanon}/${c.signature.bodyCanon}`),
     weight: 6,
   }];

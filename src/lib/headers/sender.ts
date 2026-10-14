@@ -61,14 +61,20 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
 
   if (info.fromCount === 0) {
     findings.push({
-      id: "sender.no-from", category: "sender", severity: "medium", title: "No usable From address",
-      explanation: "The From header is missing or unreadable, so the message does not say who sent it.",
+      id: "sender.no-from", category: "sender", severity: "medium", title: { en: "No usable From address", fr: "Aucune adresse From exploitable" },
+      explanation: {
+        en: "The From header is missing or unreadable, so the message does not say who sent it.",
+        fr: "L’en-tête From est absent ou illisible\u00a0: le message n’indique pas qui l’a envoyé.",
+      },
       evidence: [], weight: 6,
     });
   } else if (info.fromCount > 1) {
     findings.push({
-      id: "sender.multiple-from", category: "sender", severity: "medium", title: "Several From addresses",
-      explanation: "Mail clients show only one of them, and which one depends on the client.",
+      id: "sender.multiple-from", category: "sender", severity: "medium", title: { en: "Several From addresses", fr: "Plusieurs adresses From" },
+      explanation: {
+        en: "Mail clients show only one of them, and which one depends on the client.",
+        fr: "Les clients de messagerie n’en affichent qu’une seule, et laquelle dépend du client.",
+      },
       evidence: fromValues, weight: 6,
     });
   }
@@ -77,10 +83,15 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
   if (diverted.length > 0) {
     const domains = [...new Set(diverted.map((r) => r.domain))].join(", ");
     findings.push({
-      id: "sender.reply-to-mismatch", category: "sender", severity: "medium", title: "Replies go to a different domain",
-      explanation:
-        `Answering this email sends the reply to ${domains}, not to the sender shown` +
-        (diverted.some((r) => r.freeMail) ? ", and to a free webmail address." : "."),
+      id: "sender.reply-to-mismatch", category: "sender", severity: "medium", title: { en: "Replies go to a different domain", fr: "Les réponses partent vers un autre domaine" },
+      explanation: {
+        en:
+          `Answering this email sends the reply to ${domains}, not to the sender shown` +
+          (diverted.some((r) => r.freeMail) ? ", and to a free webmail address." : "."),
+        fr:
+          `Répondre à cet e-mail envoie la réponse à ${domains}, et non à l’expéditeur affiché` +
+          (diverted.some((r) => r.freeMail) ? ", et vers une adresse de messagerie gratuite." : "."),
+      },
       evidence: diverted.map((r) => `Reply-To: ${r.value}`), weight: 8,
     });
   }
@@ -93,12 +104,18 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
     .map((row) => ({ row, imitates: lookalikeOf(hostToUnicode(row.domain as string), references) }))
     .filter((x): x is { row: SenderRow; imitates: string } => x.imitates !== null);
   if (imitations.length > 0) {
+    const imitated = [...new Set(imitations.map((x) => x.imitates))].join(", ");
     const reads = (domain: string) => (hostToUnicode(domain) !== domain ? ` (reads as ${hostToUnicode(domain)})` : "");
     findings.push({
       id: "sender.lookalike-domain", category: "sender", severity: "high",
-      title: `Sender domain imitates ${[...new Set(imitations.map((x) => x.imitates))].join(", ")}`,
-      explanation:
-        "The address is at a domain built to be mistaken for a familiar one — your organisation's or a well-known brand's. Its owner can make it pass SPF, DKIM and DMARC.",
+      title: {
+        en: `Sender domain imitates ${imitated}`,
+        fr: `Le domaine de l’expéditeur imite ${imitated}`,
+      },
+      explanation: {
+        en: "The address is at a domain built to be mistaken for a familiar one — your organisation's or a well-known brand's. Its owner can make it pass SPF, DKIM and DMARC.",
+        fr: "L’adresse appartient à un domaine conçu pour être pris pour un domaine familier, celui de votre organisation ou d’une marque connue. Son propriétaire peut lui faire passer SPF, DKIM et DMARC.",
+      },
       evidence: [...new Set(imitations.map(({ row }) => `${row.header}: ${row.value}${reads(row.domain as string)}`))],
       weight: 15,
     });
@@ -110,16 +127,22 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
     const shown = /[^\s<>"@]+@([^\s<>"@]+\.[^\s<>"@]+)/.exec(from.name);
     if (shown && !sameOrg(shown[1], from.domain)) {
       findings.push({
-        id: "sender.display-name-address", category: "sender", severity: "high", title: "Display name shows another address",
-        explanation: "Many mail clients only show the display name, so the reader sees an address this message did not come from.",
+        id: "sender.display-name-address", category: "sender", severity: "high", title: { en: "Display name shows another address", fr: "Le nom affiché montre une autre adresse" },
+        explanation: {
+          en: "Many mail clients only show the display name, so the reader sees an address this message did not come from.",
+          fr: "De nombreux clients de messagerie n’affichent que le nom, si bien que le lecteur voit une adresse dont le message ne provient pas.",
+        },
         evidence, weight: 15,
       });
     }
     const brand = BRANDS.find((b) => b.pattern.test(from.name) && !b.domains.some((d) => sameOrg(d, from.domain)));
     if (brand) {
       findings.push({
-        id: "sender.brand-impersonation", category: "sender", severity: "medium", title: `Display name invokes ${brand.name}`,
-        explanation: `The sender calls itself ${brand.name} but writes from ${from.domain}, which is not one of ${brand.name}'s domains.`,
+        id: "sender.brand-impersonation", category: "sender", severity: "medium", title: { en: `Display name invokes ${brand.name}`, fr: `Le nom affiché se réclame de ${brand.name}` },
+        explanation: {
+          en: `The sender calls itself ${brand.name} but writes from ${from.domain}, which is not one of ${brand.name}'s domains.`,
+          fr: `L’expéditeur se présente comme ${brand.name} mais écrit depuis ${from.domain}, qui n’est pas l’un des domaines de ${brand.name}.`,
+        },
         evidence, weight: 10,
       });
     }
@@ -130,8 +153,11 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
     });
     if (imitated) {
       findings.push({
-        id: "sender.org-impersonation", category: "sender", severity: "medium", title: "Display name imitates your organisation",
-        explanation: `The display name looks like ${imitated}, but the address is at ${from.domain}.`,
+        id: "sender.org-impersonation", category: "sender", severity: "medium", title: { en: "Display name imitates your organisation", fr: "Le nom affiché imite votre organisation" },
+        explanation: {
+          en: `The display name looks like ${imitated}, but the address is at ${from.domain}.`,
+          fr: `Le nom affiché ressemble à ${imitated}, mais l’adresse est sur ${from.domain}.`,
+        },
         evidence, weight: 10,
       });
     }
@@ -143,12 +169,19 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
     });
     if (vip && !orgDomains.some((d) => sameOrg(d, from.domain))) {
       findings.push({
-        id: "sender.vip-impersonation", category: "sender", severity: "high", title: `Display name of a protected person: ${vip}`,
-        explanation:
-          `The sender shows the name of ${vip}, on your list of protected people, but writes from ${from.domain}` +
-          (isFreeMail(from.domain) ? ", a free webmail address." : ", which is not one of your organisation's domains.") +
-          " Fraudsters borrow executives' names to ask for urgent transfers or bank-detail changes." +
-          (orgDomains.length === 0 ? " Add your organisation's domains in Settings so mail from the real person is recognised." : ""),
+        id: "sender.vip-impersonation", category: "sender", severity: "high", title: { en: `Display name of a protected person: ${vip}`, fr: `Nom affiché d’une personne protégée\u00a0: ${vip}` },
+        explanation: {
+          en:
+            `The sender shows the name of ${vip}, on your list of protected people, but writes from ${from.domain}` +
+            (isFreeMail(from.domain) ? ", a free webmail address." : ", which is not one of your organisation's domains.") +
+            " Fraudsters borrow executives' names to ask for urgent transfers or bank-detail changes." +
+            (orgDomains.length === 0 ? " Add your organisation's domains in Settings so mail from the real person is recognised." : ""),
+          fr:
+            `L’expéditeur affiche le nom de ${vip}, qui figure dans votre liste de personnes protégées, mais écrit depuis ${from.domain}` +
+            (isFreeMail(from.domain) ? ", une adresse de messagerie gratuite." : ", qui n’est pas l’un des domaines de votre organisation.") +
+            " Les fraudeurs empruntent le nom de dirigeants pour réclamer des virements urgents ou des changements de coordonnées bancaires." +
+            (orgDomains.length === 0 ? " Ajoutez les domaines de votre organisation dans les Réglages pour que les messages de la vraie personne soient reconnus." : ""),
+        },
         evidence, weight: 20,
       });
     }

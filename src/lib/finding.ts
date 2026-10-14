@@ -1,3 +1,5 @@
+import type { Text } from "./i18n/text.ts";
+
 export type Severity = "info" | "low" | "medium" | "high";
 
 export type FindingCategory = "auth" | "sender" | "route" | "vendor" | "link" | "html" | "attachment" | "content";
@@ -7,9 +9,9 @@ export type Finding = {
   id: string;
   category: FindingCategory;
   severity: Severity;
-  title: string;
-  /** Why this matters, in plain words. Every theme shows it. */
-  explanation: string;
+  title: Text;
+  /** Why this matters, in plain words, in every language. Every theme shows it. */
+  explanation: Text;
   /** The exact header values that triggered the finding. */
   evidence: string[];
   /** Contribution to the risk score (aggregated in `score/`, milestone 4). */

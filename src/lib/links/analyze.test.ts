@@ -103,7 +103,7 @@ test("analyses links, QR codes and forms found in attachments", () => {
   );
   assert.equal(report.forms[0].attachment, "login.html");
   const password = report.findings.find((f) => f.id === "html.password-form");
-  assert.equal(password?.title, "Password form in an attachment");
+  assert.equal(password?.title.en, "Password form in an attachment");
   assert.deepEqual(password?.evidence, ["POST https://evil.example/collect — p (in login.html)"]);
   assert.deepEqual(report.findings.map((f) => f.id), [
     "link.deceptive",
