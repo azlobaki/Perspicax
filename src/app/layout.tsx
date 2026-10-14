@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Courier_Prime, IBM_Plex_Mono, Source_Serif_4 } from "next/font/google";
 import { PAGE_CSP } from "@/lib/csp";
-import { DEFAULT_THEME, THEME_BOOT_SCRIPT } from "@/lib/settings";
+import { BOOT_SCRIPT, DEFAULT_THEME } from "@/lib/settings";
 import "./globals.css";
 
 // Self-hosted by next/font: downloaded once at build time, never at runtime.
@@ -50,7 +50,7 @@ export default function RootLayout({
     <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning className={`${fonts} h-full antialiased`}>
       <head>
         {process.env.NODE_ENV === "production" && <meta httpEquiv="Content-Security-Policy" content={PAGE_CSP} />}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col bg-paper font-ui text-ink">{children}</body>
     </html>
