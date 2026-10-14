@@ -201,6 +201,26 @@ try {
     await load(base);
   };
 
+  // Hands a fixture to the page's file input; false when the page has none.
+  const openFixture = async (file) => {
+    const { root } = await page("DOM.getDocument");
+    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
+    if (!nodeId) return false;
+    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", file)] });
+    return true;
+  };
+  const waitForTabs = () =>
+    evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
+  // Clicks every tab in turn, letting it settle, and runs `visit` on each.
+  const forEachTab = async (visit) => {
+    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+    for (const id of tabs) {
+      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      await visit(id);
+    }
+  };
+
   mkdirSync(SHOTS, { recursive: true });
 
   // A first visit that changes nothing must leave nothing in the browser.
@@ -234,13 +254,10 @@ try {
       // A fixture may run under settings of its own (organisation domains…).
       await loadWithSettings({ theme, ...fixture.settings });
       const before = external.length;
-      const { root } = await page("DOM.getDocument");
-      const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
-      if (!nodeId) {
+      if (!(await openFixture(fixture.file))) {
         failures.push(`${theme}: no file input on the page`);
         break;
       }
-      await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", fixture.file)] });
       const first = JSON.stringify(fixture.expect[0].toLowerCase());
       const text = await evaluate(`new Promise((ok) => {
         const start = Date.now();
@@ -252,13 +269,10 @@ try {
       })`);
       const name = `${theme}-${fixture.file.replace(/\W+/g, "-")}${fixture.settings ? "-with-settings" : ""}`;
       let seen = text;
-      const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
-      for (const id of tabs) {
-        await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
-        await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      await forEachTab(async (id) => {
         await screenshot(`${name}-${id.replace(/^tab-/, "")}.png`);
         seen += ` ${await evaluate("document.body.innerText.toLowerCase()")}`;
-      }
+      });
       // Expectations may sit on any tab: the attachments' names, say.
       for (const want of fixture.expect) {
         if (!seen.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
@@ -288,17 +302,12 @@ try {
   for (const theme of THEMES) {
     await loadWithSettings({ theme, locale: "fr" });
     const before = external.length;
-    const { root } = await page("DOM.getDocument");
-    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
-    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
-    await evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
-    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+    await openFixture("spoofed-invoice.eml");
+    await waitForTabs();
     let seen = await evaluate("document.body.innerText");
-    for (const id of tabs) {
-      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
-      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+    await forEachTab(async () => {
       seen += ` ${await evaluate("document.body.innerText")}`;
-    }
+    });
     // innerText follows CSS text-transform: compare without case.
     const lower = seen.toLowerCase();
     for (const word of ENGLISH) if (lower.includes(word.toLowerCase())) failures.push(`${theme} in French: still shows "${word}"`);
@@ -312,17 +321,12 @@ try {
   await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   for (const theme of THEMES) {
     await loadWithSettings({ theme });
-    const { root } = await page("DOM.getDocument");
-    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
-    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
-    await evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
-    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
-    for (const id of tabs) {
-      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
-      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+    await openFixture("spoofed-invoice.eml");
+    await waitForTabs();
+    await forEachTab(async (id) => {
       const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
       if (overflow > 0) failures.push(`${theme} at 390 px, ${id}: ${overflow} px of horizontal overflow`);
-    }
+    });
     await evaluate(`document.getElementById("tab-headers").click()`);
     const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
     writeFileSync(join(SHOTS, `${theme}-phone.png`), Buffer.from(data, "base64"));
