@@ -5,7 +5,7 @@ import { LABEL } from "./ui";
  * the source it runs on. Point this at the public repository before
  * deploying — the link appears as soon as it is filled in.
  */
-const SOURCE_URL: string = "";
+const SOURCE_URL: string = "https://github.com/azlobaki/Perspicax";
 
 export default function Footer() {
   return (
