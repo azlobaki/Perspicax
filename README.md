@@ -23,8 +23,8 @@ This is the point of the tool, so it is worth being precise about it.
   page forgets it. Nothing about it goes to `localStorage`, a cookie or the URL.
 - **Only settings are stored**, and only once you change one, under the single
   key `perspicax.settings.v1`:
-  your organisation's domains, the defang default, the pivot services and the
-  theme. They are re-validated every time they are read.
+  your organisation's domains, the defang default, the pivot services, the
+  theme and the language. They are re-validated every time they are read.
 - **Opening an email never fires its tracking pixels.** The safe preview
   renders an inert copy in a sandboxed frame with no permissions and its own
   `default-src 'none'` policy: scripts removed, links and forms disarmed,
@@ -43,6 +43,8 @@ This is the point of the tool, so it is worth being precise about it.
   and every theme, and fails on a single request leaving the page.
 
 ## What it checks
+
+In French or English: the browser's language on the first visit, then the FR | EN switch in the top bar (saved with the settings).
 
 | Area | Checks |
 |---|---|
@@ -156,6 +158,8 @@ src/
   lib/links/            link findings
   lib/content/          what the text asks for: payments, bank details
   lib/attachments/      hashes, file types, ZIP / Office / PDF, smuggling, QR codes
+  i18n/                 interface dictionaries, locale context
+  lib/i18n/             locale, two-language texts
   lib/ioc/, lib/pivots/ indicators, defanging, pivot services
   lib/score/, lib/report/  verdict, Markdown and JSON reports
 fixtures/               synthetic emails, one scenario each

@@ -266,6 +266,46 @@ try {
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }
   }
+  // First visit from a French browser: the interface follows it and stores nothing.
+  await page("Emulation.setLocaleOverride", { locale: "fr-FR" });
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "fr-FR,fr" });
+  await load(`${base}smoke-blank`);
+  await evaluate("localStorage.clear()");
+  await load(base);
+  await evaluate("new Promise((ok) => setTimeout(ok, 1500))");
+  const frLang = await evaluate("document.documentElement.lang");
+  if (frLang !== "fr") failures.push(`French browser: <html lang> is "${frLang}"`);
+  if (!(await evaluate("document.body.innerText")).includes("Réglages")) failures.push('French browser: the page does not show "Réglages"');
+  const frStored = await evaluate("localStorage.length");
+  if (frStored !== 0) failures.push(`French browser: a first visit wrote ${frStored} localStorage key(s)`);
+  // Back to English for every later pass.
+  await page("Emulation.setLocaleOverride", { locale: "en-US" });
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "en-US,en" });
+
+  // Every theme in French: no English left on any tab, French where it matters.
+  const ENGLISH = ["Risk score", "Findings", "Relay chain", "Safe preview", "Raw source", "New email", "Settings", "Organisation domains", "Link text shows another destination"];
+  const FRENCH = ["Réglages", "Indicateurs malveillants", "Le texte du lien montre une autre destination", "Chaîne de relais"];
+  for (const theme of THEMES) {
+    await loadWithSettings({ theme, locale: "fr" });
+    const before = external.length;
+    const { root } = await page("DOM.getDocument");
+    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
+    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
+    await evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
+    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+    let seen = await evaluate("document.body.innerText");
+    for (const id of tabs) {
+      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      seen += ` ${await evaluate("document.body.innerText")}`;
+    }
+    // innerText follows CSS text-transform: compare without case.
+    const lower = seen.toLowerCase();
+    for (const word of ENGLISH) if (lower.includes(word.toLowerCase())) failures.push(`${theme} in French: still shows "${word}"`);
+    for (const word of FRENCH) if (!lower.includes(word.toLowerCase())) failures.push(`${theme} in French: lacks "${word}"`);
+    await screenshot(`${theme}-fr.png`);
+    if (external.length > before) failures.push(`${theme} in French: ${external.length - before} external request(s)`);
+  }
   // Phone width: every tab of the richest fixture, in every theme, without horizontal scrolling.
   // Not emulated as "mobile": Chromium would then widen the layout viewport to fit
   // the content, hiding the very overflow this pass looks for.
