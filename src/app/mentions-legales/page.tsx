@@ -62,7 +62,7 @@ export default function LegalNotice() {
             <p className={PARAGRAPH}>
               Perspicax est un outil d&apos;aide à l&apos;analyse des e-mails suspects. Ses verdicts, scores et constats
               reposent sur des heuristiques automatiques : ils peuvent être incomplets ou erronés, dans un sens comme
-              dans l&apos;autre. Un message noté « Clean » n&apos;est pas pour autant sûr, et un message signalé
+              dans l&apos;autre. Un message noté « Sain » n&apos;est pas pour autant sûr, et un message signalé
               n&apos;est pas nécessairement malveillant.
             </p>
             <p className={PARAGRAPH}>
@@ -93,15 +93,16 @@ export default function LegalNotice() {
               réseau depuis la page.
             </p>
             <p className={PARAGRAPH}>
-              <strong>Stockage local.</strong> Si vous modifiez un réglage (thème, domaines de votre organisation, noms à
-              protéger, neutralisation des indicateurs, services de pivot), il est enregistré dans le stockage local de
-              votre navigateur, sous la clé <span className={DATA}>{SETTINGS_KEY}</span>, et nulle part ailleurs. Rien
+              <strong>Stockage local.</strong> Si vous modifiez un réglage (thème, langue de l’interface, domaines de
+              votre organisation, noms à protéger, neutralisation des indicateurs, services de pivot), il est enregistré
+              dans le stockage local de votre navigateur, sous la clé <span className={DATA}>{SETTINGS_KEY}</span>, et nulle
+              part ailleurs. Rien
               n&apos;est écrit tant que vous ne modifiez pas un réglage. Les noms à protéger sont des données personnelles
               que vous saisissez vous-même : ils servent uniquement à la comparaison faite dans votre navigateur et
               n&apos;en sortent pas. Ce stockage sert uniquement à conserver vos
-              préférences d&apos;interface ; vous pouvez l&apos;effacer depuis les réglages (« Reset settings ») ou en
-              supprimant les données du site dans votre navigateur. Le site ne dépose aucun cookie et n&apos;utilise
-              aucune mesure d&apos;audience ni aucun traceur publicitaire.
+              préférences d&apos;interface ; vous pouvez l&apos;effacer depuis les réglages (« Réinitialiser les
+              réglages ») ou en supprimant les données du site dans votre navigateur. Le site ne dépose
+              aucun cookie et n&apos;utilise aucune mesure d&apos;audience ni aucun traceur publicitaire.
             </p>
             <p className={PARAGRAPH}>
               <strong>Journaux d&apos;hébergement.</strong> Comme tout hébergeur, Vercel enregistre les requêtes reçues
@@ -205,8 +206,9 @@ export default function LegalNotice() {
               content security policy forbids the browser from making any network connection from the page.
             </p>
             <p className={PARAGRAPH}>
-              <strong>Local storage.</strong> If you change a setting (theme, your organisation&apos;s domains, names to
-              protect, defanging of indicators, pivot services), it is saved in your browser&apos;s local storage, under
+              <strong>Local storage.</strong> If you change a setting (theme, interface language, your
+              organisation&apos;s domains, names to protect, defanging of indicators, pivot services), it is saved in
+              your browser&apos;s local storage, under
               the key <span className={DATA}>{SETTINGS_KEY}</span>, and nowhere else. Nothing is written until you
               change a setting. The names to protect are personal data that you enter yourself: they are used only for
               the comparison carried out in your browser and never leave it. This storage is used only to keep your

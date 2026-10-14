@@ -21,12 +21,15 @@ export default function LegalShell({ children }: { children: React.ReactNode }) 
         <a href="/" className={WORDMARK}>
           Perspicax
         </a>
-        <div className="ml-auto">
+        {/* Hidden until the saved language is known, like the home page: a French visitor would otherwise see English first. */}
+        <div data-localised className="ml-auto">
           <LocaleSwitch locale={locale} onChange={setLocale} />
         </div>
       </header>
       {children}
-      <Footer />
+      <div data-localised className="contents">
+        <Footer />
+      </div>
     </LocaleProvider>
   );
 }
