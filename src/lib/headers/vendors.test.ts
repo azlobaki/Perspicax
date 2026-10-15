@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HeaderField } from "../email.ts";
+import { evidenceIn } from "../finding.ts";
 import { vendorFindings, vendorVerdicts } from "./vendors.ts";
 
 const headers = (lines: Record<string, string>): HeaderField[] =>
@@ -17,11 +18,12 @@ test("decodes Microsoft's anti-spam report", () => {
   assert.equal(ms.vendor, "Microsoft 365");
   assert.equal(ms.verdict, "phishing");
   const field = (key: string) => ms.fields.find((f) => f.key === key);
-  assert.deepEqual(field("CAT"), { key: "CAT", value: "PHSH", meaning: "Phishing", flagged: true });
-  assert.deepEqual(field("SFV"), { key: "SFV", value: "SPM", meaning: "Spam", flagged: true });
+  assert.deepEqual(field("CAT"), { key: "CAT", value: "PHSH", meaning: { en: "Phishing", fr: "Hameçonnage" }, flagged: true });
+  assert.deepEqual(field("SFV"), { key: "SFV", value: "SPM", meaning: { en: "Spam", fr: "Spam" }, flagged: true });
   assert.equal(field("SCL")?.flagged, true);
   assert.equal(field("BCL")?.flagged, false);
-  assert.equal(field("PTR")?.meaning, "No reverse DNS");
+  assert.equal(field("PTR")?.meaning?.en, "No reverse DNS");
+  assert.equal(field("PTR")?.meaning?.fr, "Pas de DNS inverse");
   assert.equal(field("CTRY")?.value, "NL");
   assert.equal(field("SRV"), undefined);
 });
@@ -85,7 +87,7 @@ test("returns nothing when no gateway left a verdict", () => {
 test("turns verdicts into findings", () => {
   const findings = vendorFindings(vendorVerdicts(headers({ "X-Forefront-Antispam-Report": FOREFRONT })));
   assert.deepEqual(findings.map((f) => [f.id, f.severity, f.weight]), [["vendor.microsoft-365", "high", 15]]);
-  assert.ok(findings[0].evidence.includes("CAT: PHSH (Phishing)"));
+  assert.ok(findings[0].evidence.map((e) => evidenceIn(e, "en")).includes("CAT: PHSH (Phishing)"));
   const bulk = vendorFindings(vendorVerdicts(headers({ "X-Forefront-Antispam-Report": "SFV:NSPM;CAT:BULK;" })));
   assert.equal(bulk[0].severity, "info");
 });

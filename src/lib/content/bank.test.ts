@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { evidenceIn } from "../finding.ts";
 import { bankChangeFindings } from "./bank.ts";
 
 const check = (text: string, fromDomain: string | null = "gmail.com", orgDomains: string[] = []) =>
@@ -13,7 +14,7 @@ test("flags a payroll diversion request sent from webmail", () => {
   assert.equal(finding.category, "content");
   assert.equal(finding.severity, "high");
   assert.equal(finding.weight, 20);
-  assert.match(finding.evidence[0], /mettre à jour mes informations bancaires/);
+  assert.match(evidenceIn(finding.evidence[0], "en"), /mettre à jour mes informations bancaires/);
 });
 
 test("reads English requests too", () => {
@@ -57,6 +58,7 @@ test("needs the bank words and the change close together", () => {
 test("quotes the request in the evidence, without the rest of the email", () => {
   const long = `${"Intro. ".repeat(60)}Je souhaite modifier mon RIB.${" Fin.".repeat(60)}`;
   const [finding] = check(long);
-  assert.ok(finding.evidence[0].length <= 220, finding.evidence[0]);
-  assert.match(finding.evidence[0], /modifier mon RIB/);
+  const quote = evidenceIn(finding.evidence[0], "en");
+  assert.ok(quote.length <= 220, quote);
+  assert.match(quote, /modifier mon RIB/);
 });

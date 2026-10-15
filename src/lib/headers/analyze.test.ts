@@ -20,7 +20,7 @@ test("finds the spoof in the spoofed-invoice fixture, most severe first", () => 
     "sender.reply-to-mismatch",
     "route.helo-mismatch",
   ]);
-  assert.match(report.findings[0].title, /your own domain/);
+  assert.match(report.findings[0].title.en, /your own domain/);
 });
 
 test("raises nothing on the clean newsletter", () => {
@@ -40,5 +40,5 @@ test("gives the same findings from pasted headers", () => {
     "sender.reply-to-mismatch",
     "route.helo-mismatch",
   ]);
-  assert.match(report.findings[0].title, /DMARC failed for rhone-energie\.fr/);
+  assert.match(report.findings[0].title.en, /DMARC failed for rhone-energie\.fr/);
 });

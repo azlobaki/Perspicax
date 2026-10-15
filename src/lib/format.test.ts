@@ -23,3 +23,11 @@ test("formats sizes", () => {
   assert.equal(formatSize(49_357), "48.2 KB");
   assert.equal(formatSize(3_500_000), "3.3 MB");
 });
+
+test("formats sizes in the reader's language", () => {
+  assert.equal(formatSize(6656, "en"), "6.5 KB");
+  assert.equal(formatSize(6656, "fr"), "6,5\u00a0Ko");
+  assert.equal(formatSize(512, "fr"), "512\u00a0o");
+  assert.equal(formatSize(3 * 1024 * 1024, "fr"), "3,0\u00a0Mo");
+  assert.equal(formatSize(6656), "6.5 KB");
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/LocaleContext";
 import { IOC_TYPES } from "@/lib/ioc/types";
 import { DEFAULT_PIVOTS, type PivotService } from "@/lib/pivots/pivots";
 import { DEFAULT_SETTINGS, SETTINGS_KEY, isValidTemplate, normaliseDomain, normaliseVipName, type Settings } from "@/lib/settings";
@@ -13,6 +14,7 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
   onChange: (settings: Settings) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [domains, setDomains] = useState(settings.orgDomains.join("\n"));
   const [vips, setVips] = useState(settings.vipNames.join("\n"));
   const [pivots, setPivots] = useState<PivotService[]>(settings.pivots);
@@ -31,10 +33,10 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
     <main className="flex-1 px-4 py-8 sm:px-6 console:py-4">
       <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[3px] border-rule pb-4 console:border-b console:border-hairline dossier:border-b-2">
         <h1 className="font-display text-4xl font-extrabold tracking-tight console:text-lg console:font-semibold console:tracking-normal dossier:text-3xl dossier:font-semibold">
-          Settings
+          {t.settings.title}
         </h1>
         <button type="button" className={BUTTON} onClick={onClose}>
-          Done
+          {t.settings.done}
         </button>
       </div>
 
@@ -42,63 +44,61 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
         <div className="grid content-start gap-10 lg:col-span-5 console:gap-6">
           <section aria-labelledby="org-title">
             <h2 id="org-title" className={SECTION_TITLE}>
-              Organisation domains
+              {t.settings.orgTitle}
             </h2>
             <p className="mb-2 text-sm text-muted">
-              Your own domains, one per line. A spoofed sender in one of them weighs more, and domains that imitate them are
-              flagged.
+              {t.settings.orgHelp}
             </p>
             <textarea
-              aria-label="Organisation domains"
+              aria-label={t.settings.orgTitle}
               value={domains}
               onChange={(e) => setDomains(e.target.value)}
               rows={5}
               spellCheck={false}
-              placeholder="example.com"
+              placeholder={t.settings.orgPlaceholder}
               className={`${DATA} ${FIELD} w-full`}
             />
-            {invalid.length > 0 && <p className={`${FLAG} text-sm`}>Not a domain: {invalid.join(", ")}</p>}
+            {invalid.length > 0 && <p className={`${FLAG} text-sm`}>{t.settings.notADomain}{invalid.join(", ")}</p>}
             <button
               type="button"
               className={`${BUTTON_PRIMARY} mt-2`}
               disabled={valid.join("\n") === settings.orgDomains.join("\n")}
               onClick={() => onChange({ ...settings, orgDomains: valid })}
             >
-              Save domains
+              {t.settings.saveDomains}
             </button>
           </section>
 
           <section aria-labelledby="vip-title">
             <h2 id="vip-title" className={SECTION_TITLE}>
-              Protected names
+              {t.settings.vipTitle}
             </h2>
             <p className="mb-2 text-sm text-muted">
-              People a fraudster would impersonate — executives, finance, HR — one per line, first and last name. Their name
-              on an address outside your organisation&apos;s domains is flagged.
+              {t.settings.vipHelp}
             </p>
             <textarea
-              aria-label="Protected names"
+              aria-label={t.settings.vipTitle}
               value={vips}
               onChange={(e) => setVips(e.target.value)}
               rows={4}
               spellCheck={false}
-              placeholder="Claire Martin"
+              placeholder={t.settings.vipPlaceholder}
               className={`${FIELD} w-full`}
             />
-            {invalidVips.length > 0 && <p className={`${FLAG} text-sm`}>Needs a first and a last name: {invalidVips.join(", ")}</p>}
+            {invalidVips.length > 0 && <p className={`${FLAG} text-sm`}>{t.settings.needsFullName}{invalidVips.join(", ")}</p>}
             <button
               type="button"
               className={`${BUTTON_PRIMARY} mt-2`}
               disabled={validVips.join("\n") === settings.vipNames.join("\n")}
               onClick={() => onChange({ ...settings, vipNames: validVips })}
             >
-              Save names
+              {t.settings.saveNames}
             </button>
           </section>
 
           <section aria-labelledby="ioc-settings-title">
             <h2 id="ioc-settings-title" className={SECTION_TITLE}>
-              Indicators
+              {t.settings.indicators}
             </h2>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -107,17 +107,18 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
                 checked={settings.defang}
                 onChange={(e) => onChange({ ...settings, defang: e.target.checked })}
               />
-              Defang by default — in the IOCs tab, when copying, and in the Markdown report
+              {t.settings.defangDefault}
             </label>
           </section>
 
           <section aria-labelledby="storage-title">
             <h2 id="storage-title" className={SECTION_TITLE}>
-              Storage
+              {t.settings.storage}
             </h2>
             <p className="text-sm text-muted">
-              These settings are the only thing Perspicax keeps, in this browser, under{" "}
-              <span className={DATA}>{SETTINGS_KEY}</span>. Emails are never stored.
+              {t.settings.storageBefore}
+              <span className={DATA}>{SETTINGS_KEY}</span>
+              {t.settings.storageAfter}
             </p>
             <button
               type="button"
@@ -129,43 +130,47 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
                 onChange({ ...DEFAULT_SETTINGS, theme: settings.theme });
               }}
             >
-              Reset settings
+              {t.settings.reset}
             </button>
           </section>
         </div>
 
         <section aria-labelledby="pivot-title" className="lg:col-span-7">
           <h2 id="pivot-title" className={SECTION_TITLE}>
-            Pivot services
+            {t.settings.pivotTitle}
           </h2>
           <p className="mb-3 text-sm text-muted">
-            URL templates: <span className={DATA}>{"{value}"}</span> is the indicator URL-encoded,{" "}
-            <span className={DATA}>{"{raw}"}</span> as is, <span className={DATA}>{"{base64url}"}</span> in VirusTotal&apos;s URL form.
-            A pivot opens only when you click it.
+            {t.settings.pivotA}
+            <span className={DATA}>{"{value}"}</span>
+            {t.settings.pivotB}
+            <span className={DATA}>{"{raw}"}</span>
+            {t.settings.pivotC}
+            <span className={DATA}>{"{base64url}"}</span>
+            {t.settings.pivotD}
           </p>
           <ul className="border-t border-rule console:border-hairline">
             {pivots.map((pivot, i) => (
               <li key={pivot.id} className="grid gap-1.5 border-b border-hairline py-2.5">
                 <div className="flex flex-wrap gap-2">
                   <input
-                    aria-label="Service name"
+                    aria-label={t.settings.serviceName}
                     value={pivot.name}
                     onChange={(e) => update(i, { name: e.target.value })}
                     className={`${FIELD} w-36 text-sm`}
                   />
                   <input
-                    aria-label="URL template"
+                    aria-label={t.settings.urlTemplate}
                     value={pivot.template}
                     onChange={(e) => update(i, { template: e.target.value })}
                     spellCheck={false}
                     className={`${DATA} ${FIELD} min-w-0 flex-1 ${isValidTemplate(pivot.template) ? "" : "border-signal"}`}
                   />
                   <button type="button" className={SMALL_BUTTON} onClick={() => setPivots((list) => list.filter((_, j) => j !== i))}>
-                    Remove
+                    {t.settings.remove}
                   </button>
                 </div>
                 <fieldset className="flex flex-wrap gap-x-4 text-xs">
-                  <legend className="sr-only">Indicator types for {pivot.name || "this service"}</legend>
+                  <legend className="sr-only">{t.settings.typesFor(pivot.name)}</legend>
                   {IOC_TYPES.map((type) => (
                     <label key={type} className="flex items-center gap-1">
                       <input
@@ -191,10 +196,10 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
                 setPivots((list) => [...list, { id: `custom-${Date.now().toString(36)}`, name: "", types: ["domain"], template: "https://" }])
               }
             >
-              Add a service
+              {t.settings.addService}
             </button>
             <button type="button" className={SMALL_BUTTON} onClick={() => setPivots(DEFAULT_PIVOTS)}>
-              Restore defaults
+              {t.settings.restoreDefaults}
             </button>
             <button
               type="button"
@@ -202,13 +207,12 @@ export default function SettingsPanel({ settings, onChange, onClose }: {
               disabled={brokenPivots.length > 0}
               onClick={() => onChange({ ...settings, pivots })}
             >
-              Save services
+              {t.settings.saveServices}
             </button>
           </div>
           {brokenPivots.length > 0 && (
             <p className={`${FLAG} mt-2 text-sm`}>
-              Every service needs a name, at least one type, and an http(s) template containing {"{value}"}, {"{raw}"} or{" "}
-              {"{base64url}"}.
+              {t.settings.brokenPivots}
             </p>
           )}
         </section>

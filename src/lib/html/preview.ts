@@ -1,4 +1,5 @@
 import type { Attachment } from "../email.ts";
+import type { Locale, Text } from "../i18n/text.ts";
 import { bytesToBinary } from "../mime/bytes.ts";
 
 /** Inside the preview frame, nothing may load except inline styles and data: images. */
@@ -9,12 +10,17 @@ const SOURCE_ATTRIBUTES = ["src", "background", "poster", "data"];
 const MAX_INLINE_IMAGE = 2_000_000;
 
 // Shown in place of every remote image; scaled to the image's declared size.
-const PLACEHOLDER =
+const BLOCKED: Text = { en: "remote image blocked", fr: "image distante bloquée" };
+
+const placeholder = (locale: Locale) =>
   "data:image/svg+xml," +
   encodeURIComponent(
     "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='48'><rect width='100%' height='100%' fill='#e4e4e0'/>" +
-      "<text x='50%' y='56%' font-family='sans-serif' font-size='11' fill='#555' text-anchor='middle'>remote image blocked</text></svg>",
+      `<text x='50%' y='56%' font-family='sans-serif' font-size='11' fill='#555' text-anchor='middle'>${BLOCKED[locale]}</text></svg>`,
   );
+
+// The title ends with the link's address, so the text carries its own separator.
+const LINK_DISABLED: Text = { en: "Link disabled in preview: ", fr: "Lien désactivé dans l’aperçu\u00a0: " };
 
 function stripCssUrls(css: string): string {
   return css
@@ -22,13 +28,13 @@ function stripCssUrls(css: string): string {
     .replace(/url\(\s*(['"]?)(?!data:image\/)[^)]*?\1\s*\)/gi, "none");
 }
 
-function safeImageSource(value: string, images: Map<string, Attachment>): string {
+function safeImageSource(value: string, images: Map<string, Attachment>, locale: Locale): string {
   const v = value.trim();
   if (/^cid:/i.test(v)) {
     const image = images.get(decodeURIComponent(v.slice(4)).toLowerCase());
-    return image ? `data:${image.contentType};base64,${btoa(bytesToBinary(image.data))}` : PLACEHOLDER;
+    return image ? `data:${image.contentType};base64,${btoa(bytesToBinary(image.data))}` : placeholder(locale);
   }
-  return /^data:image\//i.test(v) ? v : PLACEHOLDER;
+  return /^data:image\//i.test(v) ? v : placeholder(locale);
 }
 
 /**
@@ -41,6 +47,7 @@ export function buildPreview(
   html: string,
   parseHtml: (html: string) => Document,
   attachments: readonly Attachment[],
+  locale: Locale = "en",
 ): string {
   const doc = parseHtml(html);
   const images = new Map(
@@ -62,7 +69,7 @@ export function buildPreview(
     if (tag === "a" || tag === "area") {
       const href = el.getAttribute("href");
       el.removeAttribute("href");
-      if (href) el.setAttribute("title", `Link disabled in preview: ${href}`);
+      if (href) el.setAttribute("title", `${LINK_DISABLED[locale]}${href}`);
     } else {
       el.removeAttribute("href");
       el.removeAttribute("xlink:href");
@@ -70,7 +77,7 @@ export function buildPreview(
     if (tag === "form") el.removeAttribute("action");
     for (const name of SOURCE_ATTRIBUTES) {
       const value = el.getAttribute(name);
-      if (value !== null) el.setAttribute(name, safeImageSource(value, images));
+      if (value !== null) el.setAttribute(name, safeImageSource(value, images, locale));
     }
     const style = el.getAttribute("style");
     if (style) el.setAttribute("style", stripCssUrls(style));

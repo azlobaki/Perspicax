@@ -22,6 +22,14 @@ function isFarOff(value: string | undefined): boolean {
   return !Number.isNaN(n) && n <= -500;
 }
 
+/** The reasons for hiding that are words, not CSS declarations; each one has a translation where links are analysed. */
+export const HIDDEN_PHRASES = {
+  attribute: "hidden attribute",
+  sameColour: "same colour as background",
+  zeroSize: "zero size",
+  offScreen: "off-screen",
+} as const;
+
 /** Why these declarations make an element invisible to the reader, or null. */
 export function hiddenReason(style: Map<string, string>): string | null {
   const get = (name: string) => style.get(name);
@@ -33,10 +41,10 @@ export function hiddenReason(style: Map<string, string>): string | null {
     get("overflow") === "hidden" &&
     (isZero(get("max-height")) || isZero(get("height")) || isZero(get("max-width")) || isZero(get("width")))
   ) {
-    return "zero size";
+    return HIDDEN_PHRASES.zeroSize;
   }
   const positioned = get("position") === "absolute" || get("position") === "fixed";
-  if ((positioned && (isFarOff(get("left")) || isFarOff(get("top")))) || isFarOff(get("text-indent"))) return "off-screen";
+  if ((positioned && (isFarOff(get("left")) || isFarOff(get("top")))) || isFarOff(get("text-indent"))) return HIDDEN_PHRASES.offScreen;
   return null;
 }
 

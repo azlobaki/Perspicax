@@ -138,8 +138,11 @@ export function relayChain(headers: readonly HeaderField[]): Hop[] {
 export function routeFindings(hops: readonly Hop[]): Finding[] {
   if (hops.length === 0) {
     return [{
-      id: "route.no-received", category: "route", severity: "info", title: "No Received headers",
-      explanation: "Without Received headers the path the message took cannot be checked. Pasted headers are often incomplete.",
+      id: "route.no-received", category: "route", severity: "info", title: { en: "No Received headers", fr: "Aucun en-tête Received" },
+      explanation: {
+        en: "Without Received headers the path the message took cannot be checked. Pasted headers are often incomplete.",
+        fr: "Sans en-têtes Received, le chemin suivi par le message ne peut pas être vérifié. Les en-têtes collés sont souvent incomplets.",
+      },
       evidence: [], weight: 0,
     }];
   }
@@ -147,18 +150,29 @@ export function routeFindings(hops: readonly Hop[]): Finding[] {
   const origin = hops.find((h) => h.ipScope === "public");
   if (origin?.heloMismatch) {
     findings.push({
-      id: "route.helo-mismatch", category: "route", severity: "low", title: "Sending server misnames itself",
-      explanation: "The first external server introduced itself with a name its IP address does not resolve back to. Legitimate mail servers usually have matching forward and reverse DNS.",
-      evidence: [`HELO ${origin.helo}`, `from ${origin.ip} (${origin.rdns ?? "no reverse DNS"})`],
+      id: "route.helo-mismatch", category: "route", severity: "low", title: { en: "Sending server misnames itself", fr: "Le serveur d’envoi se présente sous un faux nom" },
+      explanation: {
+        en: "The first external server introduced itself with a name its IP address does not resolve back to. Legitimate mail servers usually have matching forward and reverse DNS.",
+        fr: "Le premier serveur externe s’est présenté sous un nom auquel son adresse IP ne correspond pas en DNS inverse. Les serveurs de messagerie légitimes ont en général un DNS direct et inverse cohérents.",
+      },
+      evidence: [
+        `HELO ${origin.helo}`,
+        origin.rdns !== null
+          ? `from ${origin.ip} (${origin.rdns})`
+          : { en: `from ${origin.ip} (no reverse DNS)`, fr: `from ${origin.ip} (pas de DNS inverse)` },
+      ],
       weight: 4,
     });
   }
   const skewed = hops.filter((h) => h.delay !== null && h.delay < -300);
   if (skewed.length > 0) {
     findings.push({
-      id: "route.clock-skew", category: "route", severity: "info", title: "Relay clocks disagree",
-      explanation: "At least one server stamped a time earlier than the server before it. Usually a misconfigured clock; inserted Received headers look the same.",
-      evidence: skewed.map((h) => `hop ${h.index}: ${h.delay} s`), weight: 0,
+      id: "route.clock-skew", category: "route", severity: "info", title: { en: "Relay clocks disagree", fr: "Les horloges des relais ne concordent pas" },
+      explanation: {
+        en: "At least one server stamped a time earlier than the server before it. Usually a misconfigured clock; inserted Received headers look the same.",
+        fr: "Au moins un serveur a daté le message plus tôt que le serveur précédent. C’est généralement une horloge mal réglée\u00a0; des en-têtes Received insérés ont le même effet.",
+      },
+      evidence: skewed.map((h) => ({ en: `hop ${h.index}: ${h.delay} s`, fr: `saut ${h.index}\u00a0: ${h.delay} s` })), weight: 0,
     });
   }
   return findings;

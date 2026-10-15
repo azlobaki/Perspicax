@@ -1,6 +1,7 @@
-import type { Severity } from "@/lib/finding";
+"use client";
 
-const LABEL: Record<Severity, string> = { high: "High", medium: "Medium", low: "Low", info: "Info" };
+import { useT } from "@/i18n/LocaleContext";
+import type { Severity } from "@/lib/finding";
 
 // Swiss: a square mark. Console: an inverted or tinted word. Dossier: the
 // word is for screen readers only — the red margin weight carries it.
@@ -19,10 +20,11 @@ const WORD: Record<Severity, string> = {
 };
 
 export default function SeverityTag({ severity }: { severity: Severity }) {
+  const t = useT();
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap dossier:sr-only">
       <span aria-hidden className={`inline-block size-[9px] shrink-0 console:hidden ${MARK[severity]}`} />
-      <span className={`console:uppercase ${WORD[severity]}`}>{LABEL[severity]}</span>
+      <span className={`console:uppercase ${WORD[severity]}`}>{t.severity[severity]}</span>
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HeaderField } from "../email.ts";
+import { evidenceIn } from "../finding.ts";
 import { senderFindings, senderInfo } from "./sender.ts";
 
 const headers = (lines: Record<string, string>): HeaderField[] =>
@@ -40,8 +41,8 @@ test("shows a null Return-Path as is", () => {
 test("flags replies diverted to another domain, mentioning free mail", () => {
   const findings = senderFindings(senderInfo(SPOOF), []);
   assert.deepEqual(findings.map((f) => f.id), ["sender.reply-to-mismatch"]);
-  assert.match(findings[0].explanation, /outlook\.fr/);
-  assert.match(findings[0].explanation, /free webmail/);
+  assert.match(findings[0].explanation.en, /outlook\.fr/);
+  assert.match(findings[0].explanation.en, /free webmail/);
 });
 
 test("flags a display name that shows another address", () => {
@@ -52,7 +53,7 @@ test("flags a display name that shows another address", () => {
 test("flags brand impersonation, not the brand itself", () => {
   const fake = senderFindings(senderInfo(headers({ From: '"Microsoft 365 Security" <alert@m365-secure.top>' })), []);
   assert.deepEqual(fake.map((f) => f.id), ["sender.brand-impersonation"]);
-  assert.match(fake[0].title, /Microsoft/);
+  assert.match(fake[0].title.en, /Microsoft/);
   const real = senderFindings(senderInfo(headers({ From: "Microsoft <no-reply@email.microsoft.com>" })), []);
   assert.deepEqual(real, []);
 });
@@ -74,14 +75,14 @@ test("flags a sender domain that imitates the organisation's or a brand's", () =
     "Return-Path": "<pdg@rhone-energie-direction.com>",
   }));
   const own = senderFindings(bec, ["rhone-energie.fr"]).find((f) => f.id === "sender.lookalike-domain");
-  assert.equal(own?.title, "Sender domain imitates rhone-energie.fr");
+  assert.equal(own?.title.en, "Sender domain imitates rhone-energie.fr");
   assert.equal(own?.severity, "high");
   assert.deepEqual(own?.evidence, ["From: pdg@rhone-energie-direction.com", "Return-Path: pdg@rhone-energie-direction.com"]);
   // Without the organisation's domain configured there is nothing to compare with.
   assert.equal(senderFindings(bec, []).find((f) => f.id === "sender.lookalike-domain"), undefined);
 
   const paypal = senderFindings(senderInfo(headers({ From: "PayPal <service@xn--pypal-4ve.com>" })), []);
-  assert.deepEqual(paypal.find((f) => f.id === "sender.lookalike-domain")?.evidence, ["From: service@xn--pypal-4ve.com (reads as pаypal.com)"]);
+  assert.deepEqual(paypal.find((f) => f.id === "sender.lookalike-domain")?.evidence.map((e) => evidenceIn(e, "en")), ["From: service@xn--pypal-4ve.com (reads as pаypal.com)"]);
 });
 
 test("leaves real brand domains, the organisation itself and free mail alone", () => {
@@ -99,12 +100,12 @@ test("flags a protected person's name on an outside address", () => {
   const [webmail] = findings('"MARTIN Claire" <claire.martin.direction@gmail.com>');
   assert.equal(webmail.severity, "high");
   assert.equal(webmail.weight, 20);
-  assert.match(webmail.title, /Claire Martin/);
-  assert.match(webmail.explanation, /free webmail/);
+  assert.match(webmail.title.en, /Claire Martin/);
+  assert.match(webmail.explanation.en, /free webmail/);
   assert.equal(findings("Jean-Paul Dupont <jp@dupont-conseil.top>").length, 0, "a different name");
   assert.equal(findings("=?utf-8?Q?Jean_Pierre_DUPONT?= <jp@dupont-conseil.top>").length, 1, "accents, case and hyphens");
   assert.equal(findings("Claire Martin <c.martin@rhone-energie.fr>").length, 0, "the real address");
   assert.equal(findings("Claire Martin <c.martin@mail.rhone-energie.fr>").length, 0, "a subdomain of it");
   assert.equal(findings("Claire Dubois <c.dubois@gmail.com>").length, 0, "only one of the names");
-  assert.match(findings("Claire Martin <c.martin@gmail.com>", [])[0].explanation, /Settings/);
+  assert.match(findings("Claire Martin <c.martin@gmail.com>", [])[0].explanation.en, /Settings/);
 });

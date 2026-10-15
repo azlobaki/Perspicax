@@ -37,7 +37,7 @@ test("the spoofed invoice: every kind of finding, malicious indicators", async (
 
 test("uses the organisation's domains", async () => {
   const report = await analyse("spoofed-invoice.eml", ["rhone-energie.fr"]);
-  assert.match(report.findings.find((f) => f.id === "auth.dmarc-fail")?.title ?? "", /your own domain/);
+  assert.match(report.findings.find((f) => f.id === "auth.dmarc-fail")?.title.en ?? "", /your own domain/);
 });
 
 test("the clean newsletter: nothing, and its DKIM body hash matches", async () => {
@@ -104,7 +104,7 @@ test("the CEO-fraud email: a display name that shows another address and a trans
   });
   const own = await analyse("bec-display-name.eml", ["rhone-energie.fr"]);
   assert.ok(own.findings.some((f) => f.id === "sender.org-impersonation"));
-  assert.equal(own.findings.find((f) => f.id === "sender.lookalike-domain")?.title, "Sender domain imitates rhone-energie.fr");
+  assert.equal(own.findings.find((f) => f.id === "sender.lookalike-domain")?.title.en, "Sender domain imitates rhone-energie.fr");
 });
 
 test("the payroll diversion: a payment request from webmail, worse in a protected person's name", async () => {

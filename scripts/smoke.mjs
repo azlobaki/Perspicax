@@ -50,6 +50,8 @@ async function launch() {
     process.env.CHROME ?? "chromium",
     [
       "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+      // The app follows the browser's language: pin English so the run does not depend on the machine.
+      "--lang=en-US",
       // Ubuntu 24.04 CI runners forbid the unprivileged user namespaces Chrome's
       // sandbox needs; the pages loaded here are our own build and fixtures.
       ...(process.env.CI ? ["--no-sandbox"] : []),
@@ -132,6 +134,10 @@ try {
   const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
   const page = (method, params) => cdp.send(method, params, sessionId);
   for (const domain of ["Page", "Network", "Runtime", "DOM", "Log"]) await page(`${domain}.enable`);
+  // The app follows the browser's language: pin English (French passes are added separately).
+  await page("Emulation.setLocaleOverride", { locale: "en-US" });
+  const { userAgent } = await cdp.send("Browser.getVersion");
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "en-US,en" });
   await page("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: 1000, deviceScaleFactor: 1, mobile: false });
   cdp.on((msg) => {
     if (msg.method !== "Network.requestWillBeSent" || msg.sessionId !== sessionId) return;
@@ -195,6 +201,37 @@ try {
     await load(base);
   };
 
+  // Hands a fixture to the page's file input; false when the page has none.
+  const openFixture = async (file) => {
+    const { root } = await page("DOM.getDocument");
+    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
+    if (!nodeId) return false;
+    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", file)] });
+    return true;
+  };
+  // Waits up to 5 s for the report's tabs; records a failure for `where` and returns false when they never come.
+  const waitForTabs = async (where) => {
+    const shown = await evaluate(`new Promise((ok) => {
+      const start = Date.now();
+      (function poll() {
+        if (document.querySelector('[role="tab"]')) ok(true);
+        else if (Date.now() - start > 5000) ok(false);
+        else setTimeout(poll, 50);
+      })();
+    })`);
+    if (!shown) failures.push(`${where}: the report's tabs never appeared`);
+    return shown;
+  };
+  // Clicks every tab in turn, letting it settle, and runs `visit` on each.
+  const forEachTab = async (visit) => {
+    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
+    for (const id of tabs) {
+      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      await visit(id);
+    }
+  };
+
   mkdirSync(SHOTS, { recursive: true });
 
   // A first visit that changes nothing must leave nothing in the browser.
@@ -211,24 +248,27 @@ try {
     await evaluate(`document.getElementById("open-settings").click()`);
     await evaluate("new Promise((ok) => setTimeout(ok, 300))");
     await screenshot(`${theme}-settings.png`);
-    await load(`${base}mentions-legales`);
-    const legal = await evaluate("document.body.innerText");
-    for (const want of ["Vercel Inc.", "contact.azlobaki@pm.me", "ne remplace pas l'analyse d'une personne qualifiée"]) {
-      if (!legal.includes(want)) failures.push(`${theme}: legal notice misses "${want}"`);
+    for (const [locale, wants] of [
+      ["fr", ["Vercel Inc.", "contact.azlobaki@pm.me", "ne remplace pas l'analyse d'une personne qualifiée"]],
+      ["en", ["Vercel Inc.", "contact.azlobaki@pm.me", "the French text is the legally binding one"]],
+    ]) {
+      await loadWithSettings({ theme, locale });
+      await load(`${base}mentions-legales`);
+      const legal = await evaluate("document.body.innerText");
+      for (const want of wants) {
+        if (!legal.includes(want)) failures.push(`${theme}: ${locale} legal notice misses "${want}"`);
+      }
+      if (locale === "en") await screenshot(`${theme}-legal.png`);
     }
-    await screenshot(`${theme}-legal.png`);
 
     for (const fixture of fixtures) {
       // A fixture may run under settings of its own (organisation domains…).
       await loadWithSettings({ theme, ...fixture.settings });
       const before = external.length;
-      const { root } = await page("DOM.getDocument");
-      const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
-      if (!nodeId) {
+      if (!(await openFixture(fixture.file))) {
         failures.push(`${theme}: no file input on the page`);
         break;
       }
-      await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", fixture.file)] });
       const first = JSON.stringify(fixture.expect[0].toLowerCase());
       const text = await evaluate(`new Promise((ok) => {
         const start = Date.now();
@@ -240,13 +280,10 @@ try {
       })`);
       const name = `${theme}-${fixture.file.replace(/\W+/g, "-")}${fixture.settings ? "-with-settings" : ""}`;
       let seen = text;
-      const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
-      for (const id of tabs) {
-        await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
-        await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+      await forEachTab(async (id) => {
         await screenshot(`${name}-${id.replace(/^tab-/, "")}.png`);
         seen += ` ${await evaluate("document.body.innerText.toLowerCase()")}`;
-      }
+      });
       // Expectations may sit on any tab: the attachments' names, say.
       for (const want of fixture.expect) {
         if (!seen.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
@@ -254,26 +291,72 @@ try {
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }
   }
+  // First visit from a French browser: the interface follows it and stores nothing.
+  await page("Emulation.setLocaleOverride", { locale: "fr-FR" });
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "fr-FR,fr" });
+  await load(`${base}smoke-blank`);
+  await evaluate("localStorage.clear()");
+  await load(base);
+  await evaluate("new Promise((ok) => setTimeout(ok, 1500))");
+  const frLang = await evaluate("document.documentElement.lang");
+  if (frLang !== "fr") failures.push(`French browser: <html lang> is "${frLang}"`);
+  if (!(await evaluate("document.body.innerText")).includes("Réglages")) failures.push('French browser: the page does not show "Réglages"');
+  const frStored = await evaluate("localStorage.length");
+  if (frStored !== 0) failures.push(`French browser: a first visit wrote ${frStored} localStorage key(s)`);
+  // Back to English for every later pass.
+  await page("Emulation.setLocaleOverride", { locale: "en-US" });
+  await page("Emulation.setUserAgentOverride", { userAgent, acceptLanguage: "en-US,en" });
+
+  // Every theme in French: no English left on any tab, French where it matters.
+  const ENGLISH = ["Risk score", "Findings", "Relay chain", "Safe preview", "Raw source", "New email", "Settings", "Organisation domains", "Link text shows another destination"];
+  const FRENCH = ["Réglages", "Indicateurs malveillants", "Le texte du lien montre une autre destination", "Chaîne de relais"];
+  for (const theme of THEMES) {
+    await loadWithSettings({ theme, locale: "fr" });
+    const before = external.length;
+    if (!(await openFixture("spoofed-invoice.eml"))) {
+      failures.push(`${theme} in French: no file input on the page`);
+      continue;
+    }
+    if (!(await waitForTabs(`${theme} in French`))) continue;
+    let seen = await evaluate("document.body.innerText");
+    await forEachTab(async () => {
+      seen += ` ${await evaluate("document.body.innerText")}`;
+    });
+    // innerText follows CSS text-transform: compare without case.
+    const lower = seen.toLowerCase();
+    for (const word of ENGLISH) if (lower.includes(word.toLowerCase())) failures.push(`${theme} in French: still shows "${word}"`);
+    for (const word of FRENCH) if (!lower.includes(word.toLowerCase())) failures.push(`${theme} in French: lacks "${word}"`);
+    await screenshot(`${theme}-fr.png`);
+    if (external.length > before) failures.push(`${theme} in French: ${external.length - before} external request(s)`);
+  }
   // Phone width: every tab of the richest fixture, in every theme, without horizontal scrolling.
   // Not emulated as "mobile": Chromium would then widen the layout viewport to fit
   // the content, hiding the very overflow this pass looks for.
   await page("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   for (const theme of THEMES) {
     await loadWithSettings({ theme });
-    const { root } = await page("DOM.getDocument");
-    const { nodeId } = await page("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
-    await page("DOM.setFileInputFiles", { nodeId, files: [join(ROOT, "fixtures", "spoofed-invoice.eml")] });
-    await evaluate(`new Promise((ok) => { (function poll() { document.querySelector('[role="tab"]') ? ok() : setTimeout(poll, 50); })(); })`);
-    const tabs = await evaluate(`[...document.querySelectorAll('[role="tab"]')].map((t) => t.id)`);
-    for (const id of tabs) {
-      await evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
-      await evaluate("new Promise((ok) => setTimeout(ok, 300))");
+    if (!(await openFixture("spoofed-invoice.eml"))) {
+      failures.push(`${theme} at 390 px: no file input on the page`);
+      continue;
+    }
+    if (!(await waitForTabs(`${theme} at 390 px`))) continue;
+    await forEachTab(async (id) => {
       const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
       if (overflow > 0) failures.push(`${theme} at 390 px, ${id}: ${overflow} px of horizontal overflow`);
-    }
+    });
     await evaluate(`document.getElementById("tab-headers").click()`);
     const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
     writeFileSync(join(SHOTS, `${theme}-phone.png`), Buffer.from(data, "base64"));
+  }
+  // French words are longer: one theme at phone width in French, every tab.
+  await loadWithSettings({ theme: "suisse", locale: "fr" });
+  if (!(await openFixture("spoofed-invoice.eml"))) {
+    failures.push("suisse in French at 390 px: no file input on the page");
+  } else if (await waitForTabs("suisse in French at 390 px")) {
+    await forEachTab(async (id) => {
+      const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
+      if (overflow > 0) failures.push(`suisse in French at 390 px, ${id}: ${overflow} px of horizontal overflow`);
+    });
   }
 } finally {
   cdp.close();

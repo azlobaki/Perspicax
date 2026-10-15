@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useT } from "@/i18n/LocaleContext";
 import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { reportJson } from "@/lib/report/json";
@@ -23,21 +24,23 @@ export default function ExportBar({ email, report, file, defang }: {
   file: { name: string; size: number };
   defang: boolean;
 }) {
-  const markdown = () => reportMarkdown({ email, report, file, generatedAt: new Date(), defang });
+  const t = useT();
+  const locale = useLocale();
+  const markdown = () => reportMarkdown({ email, report, file, generatedAt: new Date(), defang, locale });
   const base = file.name.replace(/\.[^.]+$/, "") || "email";
   return (
     <div className="mt-5 flex flex-wrap items-center gap-2">
-      <span className={LABEL}>Report</span>
-      <CopyButton text={markdown} label="Copy Markdown" />
+      <span className={LABEL}>{t.exportBar.report}</span>
+      <CopyButton text={markdown} label={t.exportBar.copyMarkdown} />
       <button type="button" className={SMALL_BUTTON} onClick={() => download(`${base}.perspicax.md`, markdown(), "text/markdown")}>
-        Download .md
+        {t.exportBar.downloadMd}
       </button>
       <button
         type="button"
         className={SMALL_BUTTON}
         onClick={() => download(`${base}.perspicax.json`, reportJson({ email, report, file, generatedAt: new Date() }), "application/json")}
       >
-        Download .json
+        {t.exportBar.downloadJson}
       </button>
     </div>
   );

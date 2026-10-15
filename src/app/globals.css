@@ -96,3 +96,14 @@
   scrollbar-color: var(--px-hairline) transparent;
   scrollbar-width: thin;
 }
+
+/* A French visitor sees the prerendered English page only until the app has applied French. */
+html[lang="fr"]:not([data-locale-ready]) [data-localised] {
+  visibility: hidden;
+}
+
+/* The legal notice holds both languages; <html lang> picks one, before first paint. */
+html[lang="fr"] [data-locale="en"],
+html:not([lang="fr"]) [data-locale="fr"] {
+  display: none;
+}

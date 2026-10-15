@@ -1,6 +1,10 @@
+import type { Text } from "../i18n/text.ts";
 import { decodeBase64 } from "../mime/bytes.ts";
 
-export type Wrapper = { service: string; url: string };
+export type Wrapper = { service: Text; url: string };
+
+/** A product name reads the same in every language. */
+const brand = (name: string): Text => ({ en: name, fr: name });
 
 export type Unwrapped = {
   /** Destination once every recognised wrapper is removed. */
@@ -45,7 +49,7 @@ function decodeProofpointV3(embedded: string, encoded: string): string {
 
 function unwrapOnce(href: string): Wrapper | { opaque: string } | null {
   const v3 = V3.exec(href);
-  if (v3) return { service: "Proofpoint URL Defense", url: decodeProofpointV3(v3[1], v3[2]) };
+  if (v3) return { service: brand("Proofpoint URL Defense"), url: decodeProofpointV3(v3[1], v3[2]) };
 
   let url: URL;
   try {
@@ -57,34 +61,34 @@ function unwrapOnce(href: string): Wrapper | { opaque: string } | null {
   const param = (key: string) => url.searchParams.get(key);
 
   if (host.endsWith(".safelinks.protection.outlook.com") && isAbsoluteHttp(param("url"))) {
-    return { service: "Microsoft Safe Links", url: param("url") as string };
+    return { service: brand("Microsoft Safe Links"), url: param("url") as string };
   }
   if (host === "urldefense.proofpoint.com" && url.pathname.startsWith("/v2/url") && param("u")) {
-    return { service: "Proofpoint URL Defense", url: decodeSafely((param("u") as string).replace(/-/g, "%").replace(/_/g, "/")) };
+    return { service: brand("Proofpoint URL Defense"), url: decodeSafely((param("u") as string).replace(/-/g, "%").replace(/_/g, "/")) };
   }
   if (host === "urldefense.proofpoint.com" && url.pathname.startsWith("/v1/url") && isAbsoluteHttp(param("u"))) {
-    return { service: "Proofpoint URL Defense", url: param("u") as string };
+    return { service: brand("Proofpoint URL Defense"), url: param("u") as string };
   }
   if (/^(www\.)?google\.[a-z.]+$/.test(host) && url.pathname === "/url") {
     const target = param("q") ?? param("url");
-    if (isAbsoluteHttp(target)) return { service: "Google redirect", url: target };
+    if (isAbsoluteHttp(target)) return { service: { en: "Google redirect", fr: "Redirection Google" }, url: target };
   }
   if (host === "linkprotect.cudasvc.com" && isAbsoluteHttp(param("a"))) {
-    return { service: "Barracuda Link Protection", url: param("a") as string };
+    return { service: brand("Barracuda Link Protection"), url: param("a") as string };
   }
   if (host === "secure-web.cisco.com") {
     const last = decodeSafely(url.pathname.split("/").pop() ?? "");
-    if (isAbsoluteHttp(last)) return { service: "Cisco Secure Email", url: last };
+    if (isAbsoluteHttp(last)) return { service: brand("Cisco Secure Email"), url: last };
   }
   if (host.endsWith("protection.sophos.com") && param("u")) {
     const target = new TextDecoder().decode(decodeBase64(param("u") as string));
-    if (isAbsoluteHttp(target)) return { service: "Sophos Time-of-Click", url: target };
+    if (isAbsoluteHttp(target)) return { service: brand("Sophos Time-of-Click"), url: target };
   }
   if (/(^|\.)mimecast\.com$/.test(host) && url.pathname.startsWith("/s/")) return { opaque: "Mimecast URL Protect" };
 
   for (const key of REDIRECT_KEYS) {
     const target = param(key);
-    if (isAbsoluteHttp(target)) return { service: "Redirect parameter", url: target };
+    if (isAbsoluteHttp(target)) return { service: { en: "Redirect parameter", fr: "Paramètre de redirection" }, url: target };
   }
   return null;
 }

@@ -1,3 +1,4 @@
+import { isLocale, LOCALES, type Locale } from "./i18n/text.ts";
 import { IOC_TYPES, type IocType } from "./ioc/types.ts";
 import { isIPv4 } from "./net/ip.ts";
 import { DEFAULT_PIVOTS, type PivotService } from "./pivots/pivots.ts";
@@ -17,6 +18,8 @@ export const THEME_LABELS: Record<Theme, string> = {
 
 export type Settings = {
   theme: Theme;
+  /** Interface language; null follows the browser. */
+  locale: Locale | null;
   /** The analyst's own domains: spoofing them weighs more, lookalikes of them are flagged. */
   orgDomains: string[];
   /** People a fraudster would impersonate (executives, finance): their name on an outside address is flagged. */
@@ -28,6 +31,7 @@ export type Settings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: DEFAULT_THEME,
+  locale: null,
   orgDomains: [],
   vipNames: [],
   defang: true,
@@ -114,6 +118,7 @@ export function parseSettings(value: unknown): Settings {
   }
   return {
     theme: isTheme(raw.theme) ? raw.theme : DEFAULT_THEME,
+    locale: isLocale(raw.locale) ? raw.locale : null,
     orgDomains: [...new Set(domains)].slice(0, MAX_DOMAINS),
     vipNames: [...vips.values()].slice(0, MAX_VIPS),
     defang: typeof raw.defang === "boolean" ? raw.defang : true,
@@ -122,11 +127,12 @@ export function parseSettings(value: unknown): Settings {
 }
 
 /**
- * Runs inline in <head>, before first paint, so a saved theme never flashes
- * the default one first. It is a string: no imports, nothing to bundle.
+ * Runs inline in <head>, before first paint: applies the saved theme and the
+ * language (saved, else the browser's first supported one, else English), so
+ * neither flashes. A string: no imports, nothing to bundle.
  */
-export const THEME_BOOT_SCRIPT = `(function(){try{var s=JSON.parse(localStorage.getItem(${JSON.stringify(
+export const BOOT_SCRIPT = `(function(){var s=null;try{s=JSON.parse(localStorage.getItem(${JSON.stringify(
   SETTINGS_KEY,
-)})||"null");var t=s&&s.theme;if(${JSON.stringify(
+)})||"null")}catch(e){}var d=document.documentElement;var t=s&&s.theme;if(${JSON.stringify(
   THEMES,
-)}.indexOf(t)>-1)document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
+)}.indexOf(t)>-1)d.setAttribute("data-theme",t);var L=${JSON.stringify(LOCALES)};var l=s&&s.locale;if(L.indexOf(l)<0){l="en";var n=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||""]);for(var i=0;i<n.length;i++){var b=String(n[i]).toLowerCase().split("-")[0];if(L.indexOf(b)>-1){l=b;break}}}d.setAttribute("lang",l)})()`;

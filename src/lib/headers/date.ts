@@ -60,16 +60,22 @@ function build(year: number, month: number, day: number, h: number, m: number, s
 export function dateFindings(raw: string | null, hops: readonly Hop[]): Finding[] {
   if (raw === null) {
     return [{
-      id: "route.date-missing", category: "route", severity: "low", title: "No Date header",
-      explanation: "Every mail client sets a Date header. Its absence points to a script or a hand-made message.",
+      id: "route.date-missing", category: "route", severity: "low", title: { en: "No Date header", fr: "Aucun en-tête Date" },
+      explanation: {
+        en: "Every mail client sets a Date header. Its absence points to a script or a hand-made message.",
+        fr: "Tout client de messagerie renseigne un en-tête Date. Son absence évoque un script ou un message fabriqué à la main.",
+      },
       evidence: [], weight: 2,
     }];
   }
   const date = parseMailDate(raw);
   if (date === null) {
     return [{
-      id: "route.date-unreadable", category: "route", severity: "low", title: "Unreadable Date header",
-      explanation: "The Date header is not in any format mail clients write.",
+      id: "route.date-unreadable", category: "route", severity: "low", title: { en: "Unreadable Date header", fr: "En-tête Date illisible" },
+      explanation: {
+        en: "The Date header is not in any format mail clients write.",
+        fr: "L’en-tête Date n’a aucun des formats utilisés par les clients de messagerie.",
+      },
       evidence: [`Date: ${raw}`], weight: 2,
     }];
   }
@@ -79,16 +85,24 @@ export function dateFindings(raw: string | null, hops: readonly Hop[]): Finding[
   const last = stamps[stamps.length - 1];
   if (date.getTime() > last + 2 * HOUR) {
     return [{
-      id: "route.date-future", category: "route", severity: "low", title: "Dated after it was delivered",
-      explanation: "The Date header is later than the time the last server received the message. Senders forge dates to keep a message at the top of the inbox.",
-      evidence: [`Date: ${raw}`, `Last relay: ${new Date(last).toISOString()}`], weight: 3,
+      id: "route.date-future", category: "route", severity: "low", title: { en: "Dated after it was delivered", fr: "Daté après sa remise" },
+      explanation: {
+        en: "The Date header is later than the time the last server received the message. Senders forge dates to keep a message at the top of the inbox.",
+        fr: "L’en-tête Date est postérieur à l’heure à laquelle le dernier serveur a reçu le message. Des expéditeurs falsifient la date pour garder un message en haut de la boîte de réception.",
+      },
+      evidence: [`Date: ${raw}`, { en: `Last relay: ${new Date(last).toISOString()}`, fr: `Dernier relais\u00a0: ${new Date(last).toISOString()}` }],
+      weight: 3,
     }];
   }
   if (date.getTime() < first - 7 * 24 * HOUR) {
     return [{
-      id: "route.date-old", category: "route", severity: "low", title: "Written long before it was sent",
-      explanation: "The Date header is more than a week older than the first relay. Replayed or resent messages look like this.",
-      evidence: [`Date: ${raw}`, `First relay: ${new Date(first).toISOString()}`], weight: 2,
+      id: "route.date-old", category: "route", severity: "low", title: { en: "Written long before it was sent", fr: "Rédigé bien avant son envoi" },
+      explanation: {
+        en: "The Date header is more than a week older than the first relay. Replayed or resent messages look like this.",
+        fr: "L’en-tête Date précède de plus d’une semaine le premier relais. Les messages rejoués ou renvoyés ont cet aspect.",
+      },
+      evidence: [`Date: ${raw}`, { en: `First relay: ${new Date(first).toISOString()}`, fr: `Premier relais\u00a0: ${new Date(first).toISOString()}` }],
+      weight: 2,
     }];
   }
   return [];

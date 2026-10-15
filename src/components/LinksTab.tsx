@@ -1,73 +1,47 @@
-import type { Link, LinkOrigin } from "@/lib/links/analyze";
+import { usePick, useT } from "@/i18n/LocaleContext";
+import type { Link } from "@/lib/links/analyze";
 import { isClickable } from "@/lib/links/analyze";
-import type { UrlFlag } from "@/lib/urls/inspect";
+import type { Messages } from "@/i18n/messages";
+import type { Text } from "@/lib/i18n/text";
 import Breakable from "./Breakable";
 import { DATA, FLAG, LABEL, SECTION_TITLE } from "./ui";
-
-const ORIGIN_LABEL: Record<LinkOrigin, string> = {
-  a: "link",
-  area: "map",
-  form: "form",
-  "meta-refresh": "refresh",
-  text: "text",
-  img: "image",
-  css: "css",
-  link: "stylesheet",
-  frame: "frame",
-  media: "media",
-  file: "in file",
-  qr: "QR code",
-};
-
-const FLAG_LABEL: Record<UrlFlag, string> = {
-  "javascript-url": "javascript:",
-  "data-url": "data: URL",
-  userinfo: "user-name trick",
-  lookalike: "lookalike",
-  homoglyph: "look-alike characters",
-  "disguised-domain": "disguised domain",
-  "ip-host": "IP address",
-  shortener: "shortener",
-  "abused-tld": "abused TLD",
-  punycode: "punycode",
-  "opaque-wrapper": "rewritten, not reversible",
-  unparseable: "unreadable",
-};
 
 // Long data: URLs would fill the screen; the start says what they are.
 const MAX_SHOWN = 300;
 
 type Badge = { text: string; flagged: boolean };
 
-function badges(link: Link): Badge[] {
+function badges(link: Link, t: Messages, pick: (text: Text) => string): Badge[] {
   const out: Badge[] = [];
-  if (link.shownHost) out.push({ text: `shows ${link.shownHost}`, flagged: true });
+  if (link.shownHost) out.push({ text: t.links.shows(link.shownHost), flagged: true });
   for (const flag of link.url.flags) {
     out.push({
-      text: flag === "lookalike" ? `lookalike of ${link.url.lookalikeOf}` : FLAG_LABEL[flag],
+      text: flag === "lookalike" ? t.links.lookalikeOf(link.url.lookalikeOf ?? "") : t.links.flags[flag],
       flagged: flag !== "punycode" && flag !== "opaque-wrapper",
     });
   }
-  if (link.hidden) out.push({ text: `hidden: ${link.hidden}`, flagged: true });
-  if (link.tracking) out.push({ text: link.tracking === "pixel" ? "tracking pixel" : "mailing tracker", flagged: link.tracking === "pixel" });
+  if (link.hidden) out.push({ text: t.links.hidden(pick(link.hidden)), flagged: true });
+  if (link.tracking) out.push({ text: link.tracking === "pixel" ? t.links.trackingPixel : t.links.mailingTracker, flagged: link.tracking === "pixel" });
   return out;
 }
 
 export default function LinksTab({ links }: { links: Link[] }) {
-  const numbered = links.map((link, i) => ({ link, n: i + 1, badges: badges(link) }));
+  const t = useT();
+  const pick = usePick();
+  const numbered = links.map((link, i) => ({ link, n: i + 1, badges: badges(link, t, pick) }));
   const byConcern = (a: (typeof numbered)[number], b: (typeof numbered)[number]) =>
     Number(b.badges.some((x) => x.flagged)) - Number(a.badges.some((x) => x.flagged));
   const clickable = numbered.filter((x) => isClickable(x.link)).sort(byConcern);
   const loaded = numbered.filter((x) => !isClickable(x.link)).sort(byConcern);
   return (
     <div className="grid gap-10 console:gap-4">
-      <LinkList id="links-title" title={`Links · ${clickable.length}`} rows={clickable} empty="No links." />
+      <LinkList id="links-title" title={t.links.heading(clickable.length)} rows={clickable} empty={t.links.none} />
       <LinkList
         id="remote-title"
-        title={`Remote content · ${loaded.length}`}
+        title={t.links.remoteHeading(loaded.length)}
         rows={loaded}
-        empty="No remote content."
-        note="Loaded automatically by a mail client that shows images. Never loaded here."
+        empty={t.links.noRemote}
+        note={t.links.remoteNote}
       />
     </div>
   );
@@ -100,23 +74,25 @@ function LinkList({ id, title, rows, empty, note }: {
 }
 
 function LinkRow({ link, n, badges: list }: { link: Link; n: number; badges: Badge[] }) {
+  const pick = usePick();
+  const t = useT();
   const destination = link.url.final ?? link.url.raw;
   const shown = destination.length > MAX_SHOWN ? `${destination.slice(0, MAX_SHOWN)}…` : destination;
   return (
     <li className="grid grid-cols-[2.5rem_5.5rem_minmax(0,1fr)] items-baseline gap-x-3 border-b border-hairline py-2 console:grid-cols-[4ch_10ch_minmax(0,1fr)] console:gap-x-2 console:border-b-0 console:py-0.5 dossier:grid-cols-[2rem_6rem_minmax(0,1fr)] dossier:border-dotted">
       <span className="text-right tabular-nums text-muted console:text-left">{n}</span>
-      <span className={LABEL}>{ORIGIN_LABEL[link.origin]}</span>
+      <span className={LABEL}>{t.links.origin[link.origin]}</span>
       <div className="min-w-0">
         {link.text && <p className="font-semibold console:text-xs console:font-normal dossier:font-normal dossier:italic">{link.text.slice(0, 200)}</p>}
-        {link.attachment && <p className="text-xs text-muted">in attachment {link.attachment}</p>}
+        {link.attachment && <p className="text-xs text-muted">{t.links.inAttachment(link.attachment)}</p>}
         <p className={`${DATA} [overflow-wrap:anywhere]`}>
           <Breakable text={shown} />
         </p>
         {link.url.displayHost && link.url.displayHost !== link.url.host && (
-          <p className={`${DATA} text-muted`}>reads as {link.url.displayHost}</p>
+          <p className={`${DATA} text-muted`}>{t.links.readsAs(link.url.displayHost)}</p>
         )}
         {link.url.wrappers.length > 0 && (
-          <p className="text-xs text-muted">via {link.url.wrappers.map((w) => w.service).join(" → ")}</p>
+          <p className="text-xs text-muted">{t.links.via}{link.url.wrappers.map((w) => pick(w.service)).join(" → ")}</p>
         )}
         {list.length > 0 && (
           <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs">

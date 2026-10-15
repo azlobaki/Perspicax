@@ -62,11 +62,19 @@ export function bankChangeFindings(input: {
         id: "content.payment-details",
         category: "content",
         severity: free ? "high" : "medium",
-        title: free ? "Payment or bank-details request from a webmail address" : "Payment or bank-details request",
-        explanation:
-          "Payroll, supplier and CEO fraud need no link or attachment: a message simply asks for a transfer, or to pay into a new account." +
-          (free ? " This one comes from a free webmail address, which anyone can open in a colleague's or supplier's name." : "") +
-          " Confirm by phone, on a number you already had, before changing anything.",
+        title: free
+          ? { en: "Payment or bank-details request from a webmail address", fr: "Demande de paiement ou de coordonnées bancaires depuis une adresse de messagerie gratuite" }
+          : { en: "Payment or bank-details request", fr: "Demande de paiement ou de coordonnées bancaires" },
+        explanation: {
+          en:
+            "Payroll, supplier and CEO fraud need no link or attachment: a message simply asks for a transfer, or to pay into a new account." +
+            (free ? " This one comes from a free webmail address, which anyone can open in a colleague's or supplier's name." : "") +
+            " Confirm by phone, on a number you already had, before changing anything.",
+          fr:
+            "La fraude au salaire, au fournisseur ou au président n’exige ni lien ni pièce jointe\u00a0: un simple message demande un virement, ou un paiement sur un nouveau compte." +
+            (free ? " Celui-ci provient d’une adresse de messagerie gratuite, que n’importe qui peut ouvrir au nom d’un collègue ou d’un fournisseur." : "") +
+            " Confirmez par téléphone, à un numéro que vous aviez déjà, avant de modifier quoi que ce soit.",
+        },
         evidence: [quote(text, start, end)],
         weight: free ? 20 : 10,
       }];

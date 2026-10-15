@@ -1,4 +1,5 @@
 import type { HeaderField } from "../email.ts";
+import type { Text } from "../i18n/text.ts";
 import { binaryToBytes } from "./bytes.ts";
 import { decodeUtf8OrLegacy } from "./charset.ts";
 
@@ -20,7 +21,7 @@ export function splitHeaderBody(binary: string): { header: string; body: string 
  * Raw 8-bit bytes are read as UTF-8 (RFC 6532), or windows-1252 when they
  * are not valid UTF-8. Lines that are not `name: value` are skipped.
  */
-export function parseHeaderBlock(header: string, warnings?: string[]): HeaderField[] {
+export function parseHeaderBlock(header: string, warnings?: Text[]): HeaderField[] {
   const text = decodeUtf8OrLegacy(binaryToBytes(header));
   const fields: HeaderField[] = [];
   for (const line of text.split(/\r?\n/)) {
@@ -32,7 +33,10 @@ export function parseHeaderBlock(header: string, warnings?: string[]): HeaderFie
     const colon = line.indexOf(":");
     const name = colon > 0 ? line.slice(0, colon).replace(/[ \t]+$/, "") : "";
     if (!/^[!-9;-~]+$/.test(name)) {
-      if (line.trim()) warnings?.push(`Ignored a line that is not a header: ${line.slice(0, 80)}`);
+      if (line.trim()) warnings?.push({
+        en: `Ignored a line that is not a header: ${line.slice(0, 80)}`,
+        fr: `Ligne ignorée, car ce n’est pas un en-tête\u00a0: ${line.slice(0, 80)}`,
+      });
       continue;
     }
     fields.push({ name, value: line.slice(colon + 1).replace(/^[ \t]+/, "") });

@@ -1,4 +1,4 @@
-import { cssUrls, hiddenReason, normaliseColor, parseStyle, parseStylesheet, type StyleRules } from "./style.ts";
+import { cssUrls, HIDDEN_PHRASES, hiddenReason, normaliseColor, parseStyle, parseStylesheet, type StyleRules } from "./style.ts";
 
 export type HtmlOrigin = "a" | "area" | "form" | "img" | "css" | "link" | "meta-refresh" | "frame" | "media";
 
@@ -68,7 +68,7 @@ export function extractHtml(doc: Document): HtmlExtract {
   const cache = new Map<Element, string | null>();
 
   const ownHidden = (el: Element): string | null => {
-    if (el.hasAttribute("hidden")) return "hidden attribute";
+    if (el.hasAttribute("hidden")) return HIDDEN_PHRASES.attribute;
     const id = el.getAttribute("id");
     const keys = (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean).map((c) => `.${c}`);
     if (id) keys.push(`#${id}`);
@@ -115,7 +115,7 @@ export function extractHtml(doc: Document): HtmlExtract {
         const href = el.getAttribute("href");
         if (href && href.trim()) {
           const { color, background } = effectiveColors(el);
-          const sameColour = color !== null && color === background ? "same colour as background" : null;
+          const sameColour = color !== null && color === background ? HIDDEN_PHRASES.sameColour : null;
           links.push({
             origin: "a", raw: href.trim(), text: cleanText(el.textContent),
             hidden: hiddenOf(el) ?? sameColour, width: null, height: null,

@@ -27,7 +27,7 @@ test("finds the macros and remote template in the .docm", async () => {
   const [report] = await analyzeAttachments(attachmentsOf("macro-docm.eml"));
   assert.equal(report.detected.kind, "docx");
   assert.deepEqual(report.flags, ["macros", "remote-template"]);
-  assert.equal(report.details["remote-template"], "https://cdn-office365.top/templates/releve.dotm");
+  assert.equal(report.details["remote-template"]?.en, "https://cdn-office365.top/templates/releve.dotm");
   assert.deepEqual(report.urls, ["https://cdn-office365.top/templates/releve.dotm"]);
   assert.deepEqual(attachmentFindings([report]).map((f) => f.id), ["attachment.macros", "attachment.remote-template"]);
 });
@@ -57,9 +57,9 @@ test("flags a misnamed file, an encrypted archive and an active PDF", async () =
     file("scan.zip", encrypted),
     file("terms.pdf", strToU8("%PDF-1.7\n1 0 obj\n<< /OpenAction << /S /Launch /F (cmd.exe) >> >>\nendobj\n")),
   ]);
-  assert.equal(reports[0].details["type-mismatch"], "named .pdf, actually ZIP archive");
+  assert.equal(reports[0].details["type-mismatch"]?.en, "named .pdf, actually ZIP archive");
   assert.ok(reports[1].flags.includes("encrypted-archive"));
-  assert.equal(reports[2].details["pdf-active"], "runs an action when opened, launches a program");
+  assert.equal(reports[2].details["pdf-active"]?.en, "runs an action when opened, launches a program");
   assert.deepEqual(attachmentFindings(reports).map((f) => f.id), [
     "attachment.encrypted-archive",
     "attachment.type-mismatch",

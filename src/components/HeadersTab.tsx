@@ -1,3 +1,5 @@
+import { usePick, useT } from "@/i18n/LocaleContext";
+import type { Messages } from "@/i18n/messages";
 import type { DkimCheck } from "@/lib/dkim/bodyhash";
 import type { HeaderField } from "@/lib/email";
 import { formatDelay, formatTime } from "@/lib/format";
@@ -18,14 +20,6 @@ const METHOD_LABEL: Record<string, string> = {
   bimi: "BIMI",
 };
 
-const VERDICT_LABEL: Record<NonNullable<VendorVerdict["verdict"]>, string> = {
-  phishing: "Phishing",
-  malware: "Malware",
-  spam: "Spam",
-  bulk: "Bulk",
-  clean: "Clean",
-};
-
 export default function HeadersTab({ report, headers, dkim }: { report: HeaderReport; headers: HeaderField[]; dkim: DkimCheck[] }) {
   return (
     <div className="grid gap-x-8 gap-y-8 lg:grid-cols-12 console:gap-y-4 dossier:gap-y-6 dossier:lg:grid-cols-2">
@@ -39,23 +33,25 @@ export default function HeadersTab({ report, headers, dkim }: { report: HeaderRe
 }
 
 function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }) {
+  const pick = usePick();
+  const t = useT();
   return (
     <section
       aria-labelledby="auth-title"
       className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-1 dossier:lg:col-start-1 dossier:lg:row-start-1"
     >
       <h2 id="auth-title" className={SECTION_TITLE}>
-        Authentication
+        {t.headers.authentication}
         {auth.recordedBy && (
           <span className="normal-case tracking-normal dossier:[font-variant:normal]">
             {" "}
-            · recorded by <span className={DATA}>{auth.recordedBy}</span>
-            {auth.source && AUTH_SOURCE_NOTE[auth.source] && <> · {AUTH_SOURCE_NOTE[auth.source]}</>}
+            · {t.headers.recordedBy} <span className={DATA}>{auth.recordedBy}</span>
+            {auth.source && AUTH_SOURCE_NOTE[auth.source] && <> · {pick(AUTH_SOURCE_NOTE[auth.source]!)}</>}
           </span>
         )}
       </h2>
       {auth.entries.length === 0 ? (
-        <p className="text-muted">No authentication results in these headers.</p>
+        <p className="text-muted">{t.headers.noAuth}</p>
       ) : (
         <dl className="border-t border-rule console:border-t-0 dossier:border-t-0">
           {auth.entries.map((entry, i) => (
@@ -86,13 +82,13 @@ function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }
         <ul className="mt-3 grid gap-0.5 text-sm console:text-xs">
           {dkim.map((check, i) => (
             <li key={i}>
-              <span className={LABEL}>DKIM body hash</span>{" "}
+              <span className={LABEL}>{t.headers.dkimBodyHash}</span>{" "}
               <span className={DATA}>
                 d={check.signature.domain} s={check.signature.selector}
               </span>{" "}
               —{" "}
               <span className={check.result === "mismatch" ? FLAG : "text-muted"}>
-                {check.result === "match" ? "matches the body" : check.result === "mismatch" ? "body changed after signing" : "algorithm not supported"}
+                {check.result === "match" ? t.headers.dkimMatch : check.result === "mismatch" ? t.headers.dkimMismatch : t.headers.dkimUnsupported}
               </span>
             </li>
           ))}
@@ -102,11 +98,11 @@ function Authentication({ auth, dkim }: { auth: AuthSummary; dkim: DkimCheck[] }
   );
 }
 
-function describeRow(row: SenderRow): { text: string; flagged: boolean } | null {
+function describeRow(row: SenderRow, t: Messages): { text: string; flagged: boolean } | null {
   const notes: string[] = [];
   if (row.matchesFrom === false) notes.push("≠ From");
-  if (row.freeMail) notes.push("free mail");
-  if (row.header === "Return-Path" && row.domain === null) notes.push("null sender");
+  if (row.freeMail) notes.push(t.headers.freeMail);
+  if (row.header === "Return-Path" && row.domain === null) notes.push(t.headers.nullSender);
   return notes.length > 0 ? { text: notes.join(" · "), flagged: row.matchesFrom === false } : null;
 }
 
@@ -130,19 +126,20 @@ function SenderLine({ label, value, note, data = true }: {
 }
 
 function Sender({ sender }: { sender: SenderInfo }) {
+  const t = useT();
   return (
     <section
       aria-labelledby="sender-title"
       className="lg:col-span-7 console:lg:col-span-12 dossier:lg:col-span-1 dossier:lg:col-start-2 dossier:lg:row-start-2"
     >
       <h2 id="sender-title" className={SECTION_TITLE}>
-        Sender consistency
+        {t.headers.senderConsistency}
       </h2>
       <table className="w-full border-collapse border-t border-rule text-sm console:border-t-0 console:text-xs dossier:border-t-0">
         <tbody>
-          {sender.from?.name && <SenderLine label="Display name" value={sender.from.name} note={null} data={false} />}
+          {sender.from?.name && <SenderLine label={t.headers.displayName} value={sender.from.name} note={null} data={false} />}
           {sender.rows.map((row, i) => (
-            <SenderLine key={i} label={row.header} value={row.value} note={describeRow(row)} />
+            <SenderLine key={i} label={row.header} value={row.value} note={describeRow(row, t)} />
           ))}
         </tbody>
       </table>
@@ -150,25 +147,26 @@ function Sender({ sender }: { sender: SenderInfo }) {
   );
 }
 
-function hopFlags(hop: Hop): string[] {
+function hopFlags(hop: Hop, t: Messages): string[] {
   const flags: string[] = [];
-  if (hop.heloMismatch) flags.push(hop.rdns ? "HELO ≠ rDNS" : "HELO, no rDNS");
-  if (hop.ipScope && hop.ipScope !== "public") flags.push(hop.ipScope);
-  if (hop.delay !== null && hop.delay < -300) flags.push("clock skew");
+  if (hop.heloMismatch) flags.push(hop.rdns ? "HELO ≠ rDNS" : t.headers.heloNoRdns);
+  if (hop.ipScope && hop.ipScope !== "public") flags.push(t.headers.ipScope[hop.ipScope]);
+  if (hop.delay !== null && hop.delay < -300) flags.push(t.headers.clockSkew);
   return flags;
 }
 
 function Route({ hops }: { hops: Hop[] }) {
+  const t = useT();
   return (
     <section
       aria-labelledby="route-title"
       className="lg:col-span-12 dossier:lg:col-span-1 dossier:lg:col-start-2 dossier:lg:row-start-1"
     >
       <h2 id="route-title" className={SECTION_TITLE}>
-        Received chain · {hops.length} {hops.length === 1 ? "hop" : "hops"}, oldest first
+        {t.headers.chain(hops.length)}
       </h2>
       {hops.length === 0 ? (
-        <p className="text-muted">No Received headers.</p>
+        <p className="text-muted">{t.headers.noReceived}</p>
       ) : (
         <>
           <div
@@ -176,11 +174,11 @@ function Route({ hops }: { hops: Hop[] }) {
             className="hidden grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-x-2 border-b border-hairline text-xs text-muted console:sm:grid"
           >
             <span>#</span>
-            <span>time</span>
+            <span>{t.headers.colTime}</span>
             <span>Δ</span>
-            <span>from</span>
-            <span>by</span>
-            <span>flags</span>
+            <span>{t.headers.colFrom}</span>
+            <span>{t.headers.colBy}</span>
+            <span>{t.headers.colFlags}</span>
           </div>
           <ol className="grid border-t border-rule [grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))] console:block console:border-t-0 dossier:block dossier:border-t-0">
             {hops.map((hop) => (
@@ -194,8 +192,9 @@ function Route({ hops }: { hops: Hop[] }) {
 }
 
 function HopItem({ hop }: { hop: Hop }) {
-  const flags = hopFlags(hop);
-  const host = hop.helo ?? hop.rdns ?? hop.ip ?? "unknown";
+  const t = useT();
+  const flags = hopFlags(hop, t);
+  const host = hop.helo ?? hop.rdns ?? hop.ip ?? t.headers.unknownHost;
   const transport = [hop.protocol, hop.tls ? "TLS" : null].filter(Boolean).join(" · ");
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] content-start gap-x-2 border-r border-hairline px-3 pt-2 pb-3 first:pl-0 last:border-r-0 console:sm:grid-cols-[3ch_10ch_7ch_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] console:border-r-0 console:p-0 console:text-xs dossier:grid-cols-[5.5rem_1.75rem_minmax(0,1fr)] dossier:border-r-0 dossier:border-b dossier:px-0 dossier:py-1.5">
@@ -219,7 +218,7 @@ function HopItem({ hop }: { hop: Hop }) {
         )}
       </span>
       <span className="col-span-3 text-muted [overflow-wrap:anywhere] console:sm:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-2">
-        <span className="console:hidden">by </span>
+        <span className="console:hidden">{t.headers.by}</span>
         <span className={DATA}>{hop.by ? <Breakable text={hop.by} /> : "—"}</span>
       </span>
       <span className="col-span-3 text-xs console:sm:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-3 dossier:text-sm dossier:italic">
@@ -231,16 +230,18 @@ function HopItem({ hop }: { hop: Hop }) {
 }
 
 function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
+  const pick = usePick();
+  const t = useT();
   return (
     <section
       aria-labelledby="vendors-title"
       className="lg:col-span-12 dossier:lg:col-span-1 dossier:lg:col-start-1 dossier:lg:row-start-2"
     >
       <h2 id="vendors-title" className={SECTION_TITLE}>
-        Gateway verdicts
+        {t.headers.gatewayVerdicts}
       </h2>
       {vendors.length === 0 ? (
-        <p className="text-muted">No mail-filter verdict in these headers.</p>
+        <p className="text-muted">{t.headers.noVendors}</p>
       ) : (
         vendors.map((vendor) => (
           <div key={vendor.vendor} className="mb-4 last:mb-0">
@@ -248,7 +249,7 @@ function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
               {vendor.vendor}
               {vendor.verdict && (
                 <span className={vendor.verdict === "clean" || vendor.verdict === "bulk" ? "font-normal text-muted" : FLAG}>
-                  {VERDICT_LABEL[vendor.verdict]}
+                  {t.headers.verdicts[vendor.verdict]}
                 </span>
               )}
             </p>
@@ -258,7 +259,7 @@ function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
                   <dt className={`${DATA} ${field.flagged ? FLAG : ""}`}>
                     {field.key}: {field.value}
                   </dt>
-                  {field.meaning && <dd className="text-xs text-muted">{field.meaning}</dd>}
+                  {field.meaning && <dd className="text-xs text-muted">{pick(field.meaning)}</dd>}
                 </div>
               ))}
             </dl>
@@ -270,9 +271,10 @@ function Vendors({ vendors }: { vendors: VendorVerdict[] }) {
 }
 
 function AllHeaders({ headers }: { headers: HeaderField[] }) {
+  const t = useT();
   return (
     <details className="lg:col-span-12 dossier:lg:col-span-2">
-      <summary className={`${SECTION_TITLE} cursor-pointer select-none`}>All headers · {headers.length}</summary>
+      <summary className={`${SECTION_TITLE} cursor-pointer select-none`}>{t.headers.allHeaders(headers.length)}</summary>
       <table className="w-full border-collapse text-xs">
         <tbody>
           {headers.map((header, i) => (

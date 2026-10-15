@@ -39,11 +39,32 @@ test("exports JSON for machines, raw and without attachment content", async () =
   const data = JSON.parse(reportJson(await spoofed()));
   assert.equal(data.generator, "Perspicax");
   assert.deepEqual(data.verdict, {
-    score: 100, band: "malicious", label: "Malicious indicators",
+    score: 100, band: "malicious", label: { en: "Malicious indicators", fr: "Indicateurs malveillants" },
     categories: data.verdict.categories,
   });
   assert.equal(data.iocs.length, 16);
   assert.equal(data.links[0].final, "https://rhone-energie.fr.secure-login.click/auth?u=j.martin");
   assert.equal("html" in data.attachments[0], false);
   assert.equal(data.relayChain[0].date, "2026-10-13T07:14:02.000Z");
+});
+
+test("writes the Markdown report in French", async () => {
+  const md = reportMarkdown({ ...(await spoofed()), defang: true, locale: "fr" });
+  assert.match(md, /^## Authentification$/m);
+  assert.match(md, /^\*\*Verdict\u00a0:\*\* Indicateurs malveillants — score 100\/100$/m);
+  assert.match(md, /Le texte du lien montre une autre destination/);
+  assert.match(md, /ne remplace pas l’analyse d’une personne qualifiée/);
+  assert.doesNotMatch(md, /^## Authentication$/m);
+});
+
+test("stays in English by default", async () => {
+  const md = reportMarkdown({ ...(await spoofed()), defang: true });
+  assert.match(md, /^## Authentication$/m);
+  assert.match(md, /^\*\*Verdict:\*\* Malicious indicators — score 100\/100$/m);
+});
+
+test("JSON carries every language", async () => {
+  const json = JSON.parse(reportJson(await spoofed()));
+  assert.deepEqual(Object.keys(json.verdict.label).sort(), ["en", "fr"]);
+  assert.equal(typeof json.findings[0].title.fr, "string");
 });

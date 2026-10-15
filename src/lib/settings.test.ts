@@ -6,7 +6,7 @@ import { DEFAULT_PIVOTS } from "./pivots/pivots.ts";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
-  THEME_BOOT_SCRIPT,
+  BOOT_SCRIPT,
   isValidTemplate,
   normaliseDomain,
   normaliseVipName,
@@ -28,28 +28,36 @@ test("keeps a known theme", () => {
   assert.equal(parseSettings({ theme: "dossier", extra: 1 }).theme, "dossier");
 });
 
-function runBootScript(stored: string | null): string | undefined {
+function runBootScript(stored: string | null, languages: string[] = ["en-US"]): Record<string, string> {
   const attributes: Record<string, string> = {};
   const storage = { getItem: (key: string) => (key === SETTINGS_KEY ? stored : null) };
-  const doc = {
-    documentElement: {
-      setAttribute: (name: string, value: string) => {
-        attributes[name] = value;
-      },
-    },
-  };
-  new Function("localStorage", "document", THEME_BOOT_SCRIPT)(storage, doc);
-  return attributes["data-theme"];
+  const doc = { documentElement: { setAttribute: (name: string, value: string) => { attributes[name] = value; } } };
+  new Function("localStorage", "document", "navigator", BOOT_SCRIPT)(storage, doc, { languages });
+  return attributes;
 }
 
 test("boot script applies a saved theme", () => {
-  assert.equal(runBootScript(JSON.stringify({ theme: "dossier" })), "dossier");
+  assert.equal(runBootScript(JSON.stringify({ theme: "dossier" }))["data-theme"], "dossier");
 });
 
 test("boot script ignores unknown, broken or missing values", () => {
-  assert.equal(runBootScript(JSON.stringify({ theme: "neon" })), undefined);
-  assert.equal(runBootScript("{not json"), undefined);
-  assert.equal(runBootScript(null), undefined);
+  assert.equal(runBootScript(JSON.stringify({ theme: "neon" }))["data-theme"], undefined);
+  assert.equal(runBootScript("{not json")["data-theme"], undefined);
+  assert.equal(runBootScript(null)["data-theme"], undefined);
+});
+
+test("boot script sets the language: saved, else the browser's, else English", () => {
+  assert.equal(runBootScript(JSON.stringify({ locale: "en" }), ["fr-FR"]).lang, "en");
+  assert.equal(runBootScript(null, ["fr-FR"]).lang, "fr");
+  assert.equal(runBootScript(JSON.stringify({ locale: "xx" }), ["fr-BE"]).lang, "fr");
+  assert.equal(runBootScript("{not json", ["de"]).lang, "en");
+});
+
+test("keeps a known locale, null otherwise", () => {
+  assert.equal(parseSettings({ locale: "fr" }).locale, "fr");
+  assert.equal(parseSettings({ locale: "de" }).locale, null);
+  assert.equal(parseSettings({}).locale, null);
+  assert.equal(DEFAULT_SETTINGS.locale, null);
 });
 
 test("normalises organisation domains however they are typed", () => {
@@ -71,6 +79,7 @@ test("keeps protected names that hold a first and a last name", () => {
 test("keeps valid settings and drops the rest", () => {
   const settings = parseSettings({
     theme: "console",
+    locale: "fr",
     orgDomains: ["Rhone-Energie.fr", "rhone-energie.fr", "nope", 42],
     vipNames: ["  Claire   Martin ", "claire martin", "Madonna", 7, "Jean-Pierre DUPONT"],
     defang: false,
@@ -82,6 +91,7 @@ test("keeps valid settings and drops the rest", () => {
   });
   assert.deepEqual(settings, {
     theme: "console",
+    locale: "fr",
     orgDomains: ["rhone-energie.fr"],
     vipNames: ["Claire Martin", "Jean-Pierre DUPONT"],
     defang: false,
