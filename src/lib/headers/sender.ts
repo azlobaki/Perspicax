@@ -141,7 +141,10 @@ export function senderFindings(info: SenderInfo, orgDomains: readonly string[], 
         evidence, weight: 15,
       });
     }
-    const brand = BRANDS.find((b) => b.pattern.test(from.name) && !b.domains.some((d) => sameOrg(d, from.domain)));
+    // A brand's free webmail (outlook.com, icloud.com…) is anyone's address, not the brand's.
+    const brand = BRANDS.find(
+      (b) => b.pattern.test(from.name) && !b.domains.some((d) => !isFreeMail(d) && sameOrg(d, from.domain)),
+    );
     if (brand) {
       findings.push({
         id: "sender.brand-impersonation", category: "sender", severity: "medium", title: { en: `Display name invokes ${brand.name}`, fr: `Le nom affiché se réclame de ${brand.name}` },

@@ -58,6 +58,13 @@ test("flags brand impersonation, not the brand itself", () => {
   assert.deepEqual(real, []);
 });
 
+test("flags a brand writing from its own free webmail", () => {
+  for (const from of ['"Microsoft Account Team" <secure-alert@outlook.com>', '"Apple Support" <id-help@icloud.com>', '"La Poste" <colis@laposte.net>']) {
+    assert.deepEqual(senderFindings(senderInfo(headers({ From: from })), []).map((f) => f.id), ["sender.brand-impersonation"], from);
+  }
+  assert.deepEqual(senderFindings(senderInfo(headers({ From: "Apple <no_reply@email.apple.com>" })), []), []);
+});
+
 test("flags a display name imitating the organisation", () => {
   const info = senderInfo(headers({ From: '"Rhône Énergie Facturation" <billing@rhone-energie-paiement.com>' }));
   assert.deepEqual(senderFindings(info, ["rhone-energie.fr"]).map((f) => f.id), ["sender.lookalike-domain", "sender.org-impersonation"]);
