@@ -1,8 +1,9 @@
+import { isFreeHosting } from "../data/hosting.ts";
 import { isAbusedTld } from "../data/tlds.ts";
 import { isShortener } from "../data/shorteners.ts";
 import { orgDomain } from "../net/domain.ts";
 import { isIPv4 } from "../net/ip.ts";
-import { isHomoglyph, lookalikeOf, type Reference } from "./lookalike.ts";
+import { brandInHost, isHomoglyph, lookalikeOf, type Reference } from "./lookalike.ts";
 import { oauthRequest, type OAuthRequest } from "./oauth.ts";
 import { hostToUnicode } from "./punycode.ts";
 import { unwrapUrl, type Wrapper } from "./unwrap.ts";
@@ -20,6 +21,8 @@ export type UrlFlag =
   | "punycode"
   | "opaque-wrapper"
   | "oauth-consent"
+  | "brand-in-domain"
+  | "free-hosting"
   | "unparseable";
 
 export type InspectedUrl = {
@@ -37,6 +40,8 @@ export type InspectedUrl = {
   /** Host of `final` as a reader would see it (Unicode). */
   displayHost: string | null;
   lookalikeOf: string | null;
+  /** Brand whose name the host borrows, when it is not the brand's. */
+  brandIn: string | null;
   /** What an OAuth authorisation link asks for. */
   oauth: OAuthRequest | null;
   flags: UrlFlag[];
@@ -51,7 +56,7 @@ export function inspectUrl(raw: string, options: { base?: string | null; referen
   const cleaned = raw.trim().replace(/[\t\n\r]/g, "");
   const result: InspectedUrl = {
     raw, href: null, final: null, wrappers: [], opaque: null, scheme: null,
-    host: null, displayHost: null, lookalikeOf: null, oauth: null, flags: [],
+    host: null, displayHost: null, lookalikeOf: null, brandIn: null, oauth: null, flags: [],
   };
 
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(cleaned)?.[1].toLowerCase() ?? null;
@@ -116,6 +121,13 @@ export function inspectUrl(raw: string, options: { base?: string | null; referen
   const org = orgDomain(host);
   const subdomain = host.length > org.length ? host.slice(0, -org.length - 1) : "";
   if (DOMAIN_LIKE.test(subdomain)) result.flags.push("disguised-domain");
+  const own = options.references.some((r) => r.own && orgDomain(r.domain) === org);
+  // A lookalike or a disguised domain already says it.
+  if (!imitated && !own && !result.flags.includes("disguised-domain")) {
+    result.brandIn = brandInHost(host);
+    if (result.brandIn) result.flags.push("brand-in-domain");
+  }
+  if (isFreeHosting(host, final.pathname)) result.flags.push("free-hosting");
   if (isShortener(host)) result.flags.push("shortener");
   if (isAbusedTld(host)) result.flags.push("abused-tld");
   return result;

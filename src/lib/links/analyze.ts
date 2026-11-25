@@ -145,6 +145,11 @@ const FLAG_RULES: FlagRule[] = [
       en: "A link goes to a domain built to be mistaken for a known one.",
       fr: "Un lien mène à un domaine conçu pour être pris pour un domaine connu.",
     } },
+  { flag: "brand-in-domain", severity: "medium", weight: 10, title: { en: "Brand name in someone else's domain", fr: "Nom de marque dans le domaine d’un tiers" },
+    explanation: {
+      en: "The domain spells a well-known brand as one of its words, but belongs to someone else: anyone can register paypal-secure.com or open docusign.workers.dev.",
+      fr: "Le domaine contient le nom d’une marque connue comme l’un de ses mots, mais appartient à quelqu’un d’autre\u00a0: n’importe qui peut enregistrer paypal-secure.com ou ouvrir docusign.workers.dev.",
+    } },
   { flag: "homoglyph", severity: "high", weight: 15, title: { en: "Domain uses look-alike characters", fr: "Domaine aux caractères trompeurs" },
     explanation: {
       en: "Letters from another alphabet stand in for Latin ones, so the domain reads like a familiar name.",
@@ -179,6 +184,11 @@ const FLAG_RULES: FlagRule[] = [
     explanation: {
       en: "A URL shortener hides the destination until the link is followed.",
       fr: "Un raccourcisseur d’URL cache la destination tant que le lien n’est pas suivi.",
+    } },
+  { flag: "free-hosting", severity: "low", weight: 5, title: { en: "Link to free web hosting", fr: "Lien vers un hébergement web gratuit" },
+    explanation: {
+      en: "The page sits on a platform where anyone publishes in minutes without a domain of their own, under the platform's reputation. Phishing kits use them for that; legitimate senders rarely link there.",
+      fr: "La page se trouve sur une plateforme où n’importe qui publie en quelques minutes sans domaine à lui, sous la réputation de la plateforme. Les kits d’hameçonnage s’en servent pour cela\u00a0; les expéditeurs légitimes y renvoient rarement.",
     } },
   { flag: "abused-tld", severity: "low", weight: 3, title: { en: "Top-level domain favoured by abuse", fr: "Domaine de premier niveau prisé des abus" },
     explanation: {
@@ -260,6 +270,7 @@ function linkFindings(
       evidence: unique(hits.map((l) => {
         if (rule.flag === "lookalike") return noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`);
         if (rule.flag === "oauth-consent" && l.url.oauth) return oauthEvidence(l.url.oauth);
+        if (rule.flag === "brand-in-domain") return noted(`${hostLabel(l.url)} uses the name ${l.url.brandIn}`, `${hostLabel(l.url)} emprunte le nom ${l.url.brandIn}`);
         return destination(l);
       })),
       weight: rule.weight,
