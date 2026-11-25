@@ -26,6 +26,9 @@ export type Attachment = {
   data: Uint8Array;
 };
 
+/** An email carried inside another, already read (Outlook stores them as properties, not as a file). */
+export type AttachedMessage = { name: string; email: ParsedEmail };
+
 /** The normalised email every parser produces (`mime/` now, `msg/` in milestone 4). */
 export type ParsedEmail = {
   source: "eml" | "msg" | "headers";
@@ -34,6 +37,8 @@ export type ParsedEmail = {
   text: string | null;
   html: string | null;
   attachments: Attachment[];
+  /** Messages an Outlook .msg embeds in its own format; attached .eml and .msg files stay in `attachments`. */
+  embedded?: AttachedMessage[];
   /** Human-readable source for the Raw tab. */
   raw: string;
   /** Body bytes exactly as in the file, after the header block: what DKIM signed. Null for .msg and pasted headers. */

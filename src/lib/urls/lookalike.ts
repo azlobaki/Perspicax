@@ -1,5 +1,5 @@
 import { BRANDS } from "../data/brands.ts";
-import { orgDomain } from "../net/domain.ts";
+import { isSubdomainOf, orgDomain } from "../net/domain.ts";
 
 /**
  * Letters from other scripts that render like Latin ones — a subset of
@@ -111,4 +111,31 @@ const BRAND_REFERENCES: Reference[] = BRANDS.flatMap((brand) => brand.domains.ma
 /** What lookalikes are measured against: the organisation's domains, then well-known brands'. */
 export function referencesFor(orgDomains: readonly string[]): Reference[] {
   return [...orgDomains.map((domain) => ({ domain, own: true })), ...BRAND_REFERENCES];
+}
+
+/**
+ * The brand whose name is a whole word of someone else's domain:
+ * `paypal-secure.com`, `login.microsoft.secure-auth.top`,
+ * `docusign.workers.dev`. A word is a label, or a part of one between
+ * hyphens, digits trimmed. The registrable label counts only when it is
+ * hyphenated or sits on a hosting platform: `paypal.top` alone is the
+ * same-name-other-TLD case, too common for brands to flag (see `lookalikeOf`).
+ */
+export function brandInHost(host: string): string | null {
+  const h = host.toLowerCase();
+  const org = orgDomain(h);
+  const label = org.split(".")[0];
+  const hosted = org.split(".").length > 2 && !/^(co|com|org|net|gov|ac|edu|gouv)\./.test(org.slice(label.length + 1));
+  const sub = h.length > org.length ? h.slice(0, -org.length - 1) : "";
+  const words = [
+    ...sub.split(/[.-]/),
+    ...(label.includes("-") || hosted ? label.split("-") : []),
+  ].map((w) => w.replace(/\d+$/, "")).filter(Boolean);
+  for (const brand of BRANDS) {
+    if (!brand.tokens?.some((t) => words.includes(t))) continue;
+    const own = [...brand.domains, ...(brand.alsoOwns ?? [])];
+    if (own.some((d) => isSubdomainOf(h, d) || orgDomain(d) === org)) continue;
+    return brand.name;
+  }
+  return null;
 }

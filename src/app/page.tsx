@@ -15,6 +15,7 @@ import { analyzeEmail, type EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
 import { TextError } from "@/lib/i18n/error";
 import type { Text } from "@/lib/i18n/text";
+import { carriedMessages, isOle, type CarriedMessage } from "@/lib/messages";
 import { parseEmail, parseHeadersOnly } from "@/lib/mime/parse";
 import { parseMsg } from "@/lib/msg/parse";
 
@@ -30,12 +31,11 @@ type Loaded = { id: number; email: ParsedEmail; file: Omit<FileMeta, "name"> & {
 
 const PASTED_HEADERS: Text = { en: messages.en.page.pastedHeaders, fr: messages.fr.page.pastedHeaders };
 
-// OLE compound files (.msg) start with this signature, whatever their name.
-const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
-
 export default function Home() {
   const { settings, setSettings, loaded: settingsLoaded, locale, setLocale } = useSettings();
   const [current, setCurrent] = useState<Loaded | null>(null);
+  // The emails that carried the current one, outermost first, to come back to.
+  const [carriers, setCarriers] = useState<Loaded[]>([]);
   const [result, setResult] = useState<{ id: number; report: EmailReport } | null>(null);
   const [error, setError] = useState<Text | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -44,17 +44,35 @@ export default function Home() {
   const orgDomains = settings.orgDomains.join("\n");
   const vipNames = settings.vipNames.join("\n");
 
-  const load = useCallback((parse: () => ParsedEmail, name: string | Text, size: number) => {
+  const load = useCallback((parse: () => ParsedEmail, name: string | Text, size: number): boolean => {
     try {
       const start = performance.now();
       const email = parse();
       setCurrent({ id: ++nextId.current, email, file: { name, size, parseMs: Math.round(performance.now() - start) } });
       setError(null);
       setShowSettings(false);
+      return true;
     } catch (err) {
       setError(failure("Could not read this email: ", "Impossible de lire cet e-mail\u00a0: ", err));
+      return false;
     }
   }, []);
+
+  const openCarried = useCallback(
+    (message: CarriedMessage) => {
+      if (!current) return;
+      const carrier = current;
+      const carrierName = typeof carrier.file.name === "string" ? carrier.file.name : carrier.file.name.en;
+      if (load(message.open, `${carrierName} › ${message.name}`, message.size)) setCarriers((list) => [...list, carrier]);
+    },
+    [current, load],
+  );
+  const backToCarrier = useCallback(() => {
+    const carrier = carriers.at(-1);
+    if (!carrier) return;
+    setCarriers((list) => list.slice(0, -1));
+    setCurrent(carrier);
+  }, [carriers]);
 
   // Analyses the email in memory, and again whenever the organisation's domains or protected names change.
   useEffect(() => {
@@ -80,8 +98,8 @@ export default function Home() {
   const openFile = useCallback(
     async (file: File) => {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const isMsg = /\.msg$/i.test(file.name) || OLE_SIGNATURE.every((byte, i) => bytes[i] === byte);
-      load(() => (isMsg ? parseMsg(bytes) : parseEmail(bytes)), file.name, bytes.length);
+      const isMsg = /\.msg$/i.test(file.name) || isOle(bytes);
+      if (load(() => (isMsg ? parseMsg(bytes) : parseEmail(bytes)), file.name, bytes.length)) setCarriers([]);
     },
     [load],
   );
@@ -136,6 +154,10 @@ export default function Home() {
         file={named(current.file)}
         defang={settings.defang}
         pivots={settings.pivots}
+        carried={carriedMessages(current.email)}
+        onOpenCarried={openCarried}
+        onBack={carriers.length > 0 ? backToCarrier : undefined}
+        error={error ? error[locale] : null}
       />
     );
   } else if (current) {
@@ -152,7 +174,9 @@ export default function Home() {
         dragging={dragging}
         error={error ? error[locale] : null}
         onFile={(file) => void openFile(file)}
-        onHeaders={(text) => load(() => parseHeadersOnly(text), PASTED_HEADERS, new TextEncoder().encode(text).length)}
+        onHeaders={(text) => {
+          if (load(() => parseHeadersOnly(text), PASTED_HEADERS, new TextEncoder().encode(text).length)) setCarriers([]);
+        }}
       />
     );
   }
@@ -169,6 +193,7 @@ export default function Home() {
           onClose={() => {
             setCurrent(null);
             setResult(null);
+            setCarriers([]);
           }}
           settingsOpen={showSettings}
           onSettings={() => setShowSettings((open) => !open)}

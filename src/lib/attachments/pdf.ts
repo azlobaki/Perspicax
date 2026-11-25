@@ -8,9 +8,12 @@ export type PdfInfo = {
   active: string[];
 };
 
-const ACTIVE: [RegExp, string][] = [
+const OPEN_ACTION = "runs an action when opened";
+
+// `null`: an opening action only counts when it does something risky (see `opensRisky`).
+const ACTIVE: [RegExp | null, string][] = [
   [/\/(JavaScript|JS)\b/, "JavaScript"],
-  [/\/OpenAction\b/, "runs an action when opened"],
+  [null, OPEN_ACTION],
   [/\/AA\b/, "automatic actions"],
   [/\/Launch\b/, "launches a program"],
   [/\/EmbeddedFile\b/, "embedded file"],
@@ -20,6 +23,10 @@ const ACTIVE: [RegExp, string][] = [
 
 /** Every phrase `inspectPdf` can report in `active`. */
 export const PDF_ACTIVE_PHRASES: readonly string[] = ACTIVE.map(([, label]) => label);
+
+// Actions that reach outside the document. Opening on a page or at a zoom
+// level (a destination, or /GoTo) is what most PDFs do and is left alone.
+const RISKY_ACTION = /\/S\s*\/(JavaScript|Launch|URI|SubmitForm|ImportData|GoToR|GoToE)\b/;
 
 const MAX_INFLATED = 50_000_000;
 const MAX_STREAMS = 500;
@@ -52,6 +59,46 @@ function hexString(text: string): string {
   return out;
 }
 
+/** The dictionary that opens at `start` ("<<"), nested dictionaries included. */
+function dictionaryAt(text: string, start: number): string {
+  let depth = 0;
+  for (let i = start; i < text.length - 1; i++) {
+    if (text[i] === "<" && text[i + 1] === "<") {
+      depth++;
+      i++;
+    } else if (text[i] === ">" && text[i + 1] === ">") {
+      depth--;
+      i++;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return text.slice(start);
+}
+
+/** The objects packed in an object stream (/Type /ObjStm), by number. */
+function objectStream(dictionary: string, content: string, objects: Map<string, string>) {
+  const first = /\/First\s+(\d+)/.exec(dictionary);
+  if (!first) return;
+  const offset = Number(first[1]);
+  const numbers = content.slice(0, offset).trim().split(/\s+/).map(Number);
+  for (let i = 0; i + 1 < numbers.length; i += 2) {
+    const start = offset + numbers[i + 1];
+    const end = i + 3 < numbers.length ? offset + numbers[i + 3] : content.length;
+    objects.set(String(numbers[i]), content.slice(start, end));
+  }
+}
+
+/** Whether an /OpenAction, inline or by reference, runs script, a program, a link or a form. */
+function opensRisky(chunks: readonly string[], objects: ReadonlyMap<string, string>): boolean {
+  for (const chunk of chunks) {
+    for (const m of chunk.matchAll(/\/OpenAction\s*(?:(<<)|(\d+)\s+\d+\s+R\b)/g)) {
+      const action = m[1] ? dictionaryAt(chunk, m.index + m[0].length - 2) : (objects.get(m[2]) ?? "");
+      if (RISKY_ACTION.test(action)) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Links and active content in a PDF. Objects are often packed into
  * compressed streams, so every stream that inflates is searched too.
@@ -59,6 +106,7 @@ function hexString(text: string): string {
 export function inspectPdf(data: Uint8Array): PdfInfo {
   const text = bytesToBinary(data);
   const chunks = [text];
+  const objects = new Map<string, string>();
   let inflated = 0;
   let index = 0;
   for (let n = 0; n < MAX_STREAMS; n++) {
@@ -81,8 +129,14 @@ export function inspectPdf(data: Uint8Array): PdfInfo {
     if (out) {
       inflated += out.length;
       if (inflated > MAX_INFLATED) break;
-      chunks.push(bytesToBinary(out));
+      const content = bytesToBinary(out);
+      chunks.push(content);
+      const dictionary = text.slice(text.lastIndexOf(" obj", keyword), keyword);
+      if (/\/Type\s*\/ObjStm\b/.test(dictionary)) objectStream(dictionary, content, objects);
     }
+  }
+  for (const chunk of chunks) {
+    for (const m of chunk.matchAll(/(\d+)\s+\d+\s+obj\b([\s\S]*?)\bendobj\b/g)) objects.set(m[1], m[2]);
   }
 
   const urls: string[] = [];
@@ -90,7 +144,8 @@ export function inspectPdf(data: Uint8Array): PdfInfo {
   for (const chunk of chunks) {
     for (const m of chunk.matchAll(/\/URI\s*\(((?:\\[\s\S]|[^\\)])*)\)/g)) urls.push(unescapeLiteral(m[1]));
     for (const m of chunk.matchAll(/\/URI\s*<([0-9A-Fa-f\s]*)>/g)) urls.push(hexString(m[1]));
-    for (const [pattern, label] of ACTIVE) if (pattern.test(chunk) && !active.includes(label)) active.push(label);
+    for (const [pattern, label] of ACTIVE) if (pattern?.test(chunk) && !active.includes(label)) active.push(label);
   }
+  if (opensRisky(chunks, objects)) active.push(OPEN_ACTION);
   return { urls: [...new Set(urls.map((u) => u.trim()).filter(Boolean))], active: ACTIVE.map(([, l]) => l).filter((l) => active.includes(l)) };
 }

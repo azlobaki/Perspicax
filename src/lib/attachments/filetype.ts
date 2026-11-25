@@ -14,6 +14,7 @@ const KINDS: Record<string, { label: Text; extensions: string[] }> = {
   xls: { label: { en: "Excel 97-2003 workbook", fr: "Classeur Excel 97-2003" }, extensions: ["xls", "xlt"] },
   ppt: { label: { en: "PowerPoint 97-2003 presentation", fr: "Présentation PowerPoint 97-2003" }, extensions: ["ppt", "pps", "pot"] },
   msg: { label: { en: "Outlook message", fr: "Message Outlook" }, extensions: ["msg"] },
+  eml: { label: { en: "Email message", fr: "Message e-mail" }, extensions: ["eml"] },
   exe: { label: { en: "Windows executable", fr: "Exécutable Windows" }, extensions: ["exe", "dll", "scr", "com", "cpl", "sys", "ocx", "pif"] },
   elf: { label: { en: "Linux executable", fr: "Exécutable Linux" }, extensions: [] },
   macho: { label: { en: "macOS executable", fr: "Exécutable macOS" }, extensions: [] },

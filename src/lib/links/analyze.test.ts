@@ -113,3 +113,21 @@ test("analyses links, QR codes and forms found in attachments", () => {
     "html.password-form",
   ]);
 });
+
+test("flags links that carry the recipient's address, base64 weighing more", () => {
+  const encoded = Buffer.from("claire.dupont@rhone-energie.fr").toString("base64");
+  const email = htmlEmail(`<a href="https://evil.top/sso#${encoded}">Sign in</a><a href="https://news.example/unsub?e=claire.dupont@rhone-energie.fr">Unsubscribe</a>`);
+  const recipients = ["claire.dupont@rhone-energie.fr"];
+  const report = analyzeLinks(email, parse(email.html ?? ""), { fromDomain: null, references, recipients });
+  const finding = report.findings.find((f) => f.id === "link.recipient-in-url");
+  assert.equal(finding?.severity, "medium");
+  assert.equal(finding?.weight, 10);
+  assert.deepEqual(finding?.evidence.map((e) => evidenceIn(e, "en")), [
+    "https://evil.top/sso#REDACTED (base64)",
+    "https://news.example/unsub?e=REDACTED (as written)",
+  ]);
+
+  const plainOnly = htmlEmail('<a href="https://news.example/unsub?e=claire.dupont@rhone-energie.fr">Unsubscribe</a>');
+  const low = analyzeLinks(plainOnly, parse(plainOnly.html ?? ""), { fromDomain: null, references, recipients });
+  assert.deepEqual(low.findings.filter((f) => f.id === "link.recipient-in-url").map((f) => [f.severity, f.weight]), [["low", 4]]);
+});

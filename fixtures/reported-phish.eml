@@ -1,0 +1,39 @@
+Received: from exch01.rhone-energie.fr (10.20.0.11) by exch02.rhone-energie.fr
+ (10.20.0.12) with Microsoft SMTP Server; Thu, 15 Oct 2026 08:02:11 +0000
+Authentication-Results: mx.rhone-energie.fr; spf=pass smtp.mailfrom=rhone-energie.fr;
+ dkim=pass header.d=rhone-energie.fr; dmarc=pass header.from=rhone-energie.fr
+From: Claire Dupont <claire.dupont@rhone-energie.fr>
+To: SOC <soc@rhone-energie.fr>
+Subject: TR: Votre colis est en attente
+Date: Thu, 15 Oct 2026 08:02:10 +0000
+Message-ID: <report-0815@rhone-energie.fr>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="report"
+
+--report
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Bonjour, je viens de recevoir ce message, est-il légitime ? Claire
+
+--report
+Content-Type: message/rfc822
+Content-Disposition: attachment; filename="Votre colis est en attente.eml"
+
+Received: from smtp.colis-laposte.top (smtp.colis-laposte.top [91.121.10.7])
+ by mx.rhone-energie.fr with ESMTP; Thu, 15 Oct 2026 07:41:02 +0000
+Authentication-Results: mx.rhone-energie.fr; spf=pass smtp.mailfrom=colis-laposte.top;
+ dkim=none; dmarc=none header.from=colis-laposte.top
+From: La Poste <suivi@colis-laposte.top>
+To: Claire Dupont <claire.dupont@rhone-energie.fr>
+Subject: Votre colis est en attente
+Date: Thu, 15 Oct 2026 07:41:00 +0000
+Message-ID: <7731@colis-laposte.top>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<html><body><p>Votre colis n'a pas pu être livré : des frais de 1,99 € restent à régler.</p>
+<p><a href="https://colis-laposte.top/suivi#Y2xhaXJlLmR1cG9udEByaG9uZS1lbmVyZ2llLmZy">Régler les frais et reprogrammer la livraison</a></p></body></html>
+
+--report--

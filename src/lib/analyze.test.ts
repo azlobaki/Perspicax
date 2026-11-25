@@ -26,7 +26,6 @@ test("the spoofed invoice: every kind of finding, malicious indicators", async (
       "url.disguised-domain",
       "attachment.double-extension",
       "sender.reply-to-mismatch",
-      "route.helo-mismatch",
       "html.tracking-pixel",
       "url.abused-tld",
     ],
@@ -90,7 +89,7 @@ test("the DocuSign .msg: suspicious", async () => {
 test("pasted headers are scored on what they show", async () => {
   const source = read("spoofed-invoice.eml").toString("utf8");
   const report = await analyzeEmail(parseHeadersOnly(source.slice(0, source.indexOf("\n\n"))), { orgDomains: [], parseHtml });
-  assert.deepEqual([report.score.score, report.score.band], [45, "likely-phishing"]);
+  assert.deepEqual([report.score.score, report.score.band], [41, "likely-phishing"]);
   assert.deepEqual(report.links.links, []);
   assert.deepEqual(report.attachments, []);
   assert.deepEqual(report.dkim, []);
@@ -98,8 +97,8 @@ test("pasted headers are scored on what they show", async () => {
 
 test("the CEO-fraud email: a display name that shows another address and a transfer request, likely phishing", async () => {
   assert.deepEqual(await summary("bec-display-name.eml"), {
-    ids: ["auth.dmarc-fail", "sender.display-name-address", "content.payment-details", "sender.reply-to-mismatch", "route.helo-mismatch"],
-    score: 55,
+    ids: ["auth.dmarc-fail", "sender.display-name-address", "content.payment-details", "content.bec-request", "sender.reply-to-mismatch", "route.helo-mismatch"],
+    score: 65,
     band: "likely-phishing",
   });
   const own = await analyse("bec-display-name.eml", ["rhone-energie.fr"]);

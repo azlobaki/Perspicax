@@ -22,6 +22,10 @@ export type Hop = {
   delay: number | null;
   /** Public sender whose HELO name has no reverse DNS, or reverse DNS in another organisation. */
   heloMismatch: boolean;
+  /** The hop that names where the message came from: see `markTrust`. */
+  origin: boolean;
+  /** Written before the receiving side took the message: whoever sent it could have written it. */
+  claimed: boolean;
   raw: string;
 };
 
@@ -91,7 +95,7 @@ function parseFrom(clause: string): FromClause {
   };
 }
 
-export function parseReceived(raw: string): Omit<Hop, "index" | "delay"> {
+export function parseReceived(raw: string): Omit<Hop, "index" | "delay" | "origin" | "claimed"> {
   const value = raw.replace(/\s+/g, " ").trim();
   const semicolon = value.lastIndexOf(";");
   const head = semicolon === -1 ? value : value.slice(0, semicolon);
@@ -122,17 +126,67 @@ export function parseReceived(raw: string): Omit<Hop, "index" | "delay"> {
   };
 }
 
+/**
+ * Mail security gateways that receive for their customers and pass the
+ * message on: a hop they wrote is still on the receiving side.
+ */
+const GATEWAYS = [
+  "pphosted.com", "ppe-hosted.com", "mimecast.com", "mimecast-offshore.com", "hornetsecurity.com",
+  "antispameurope.com", "barracudanetworks.com", "cudasvc.com", "iphmx.com", "messagelabs.com",
+  "trendmicro.com", "trendmicro.eu", "sophos.com", "mailcontrol.com", "vadesecure.com", "mailinblack.com",
+  "altospam.com", "spamtitan.com", "mailprotect.be", "mx-relay.net",
+];
+
+/**
+ * Each server prepends its Received header, so only the top of the chain is
+ * written by the receiving side; everything below the hop where it took the
+ * message from the internet was written upstream, possibly by the sender.
+ * Walking down from the top, the receiving side is the organisation's own
+ * domains, known gateways and every server that wrote a hop on the way; the
+ * first hop from a public address outside it is the edge, and its sender the
+ * origin. Without such a hop (a sender on the same mail service, say), the
+ * oldest public hop stands in, as before, and nothing is marked as claimed.
+ */
+function markTrust(hops: Hop[], orgDomains: readonly string[]): void {
+  const receiving = new Set([...orgDomains.map(orgDomain), ...GATEWAYS]);
+  let edge = -1;
+  for (let i = hops.length - 1; i >= 0; i--) {
+    const hop = hops[i];
+    if (hop.by && !isIp(hop.by)) receiving.add(orgDomain(hop.by));
+    const name = hop.rdns ?? hop.helo;
+    const sender = name && !isIp(name) ? orgDomain(name) : null;
+    if (hop.ipScope === "public" && (sender === null || !receiving.has(sender))) {
+      edge = i;
+      break;
+    }
+  }
+  if (edge >= 0) {
+    hops[edge].origin = true;
+    for (let i = 0; i < edge; i++) hops[i].claimed = true;
+    return;
+  }
+  const oldestPublic = hops.find((h) => h.ipScope === "public");
+  if (oldestPublic) oldestPublic.origin = true;
+}
+
 /** The Received chain, oldest hop first. */
-export function relayChain(headers: readonly HeaderField[]): Hop[] {
+export function relayChain(headers: readonly HeaderField[], orgDomains: readonly string[] = []): Hop[] {
   // Each server prepends its own Received header, so the file reads newest first.
   const raws = getHeaders(headers, "received").reverse();
   let previous: Date | null = null;
-  return raws.map((raw, i) => {
+  const hops = raws.map((raw, i): Hop => {
     const hop = parseReceived(raw);
     const delay = hop.date && previous ? Math.round((hop.date.getTime() - previous.getTime()) / 1000) : null;
     if (hop.date) previous = hop.date;
-    return { ...hop, index: i + 1, delay };
+    return { ...hop, index: i + 1, delay, origin: false, claimed: false };
   });
+  markTrust(hops, orgDomains);
+  return hops;
+}
+
+/** The hop whose sender is where the message came from, as far as the receiving side can tell. */
+export function originHop(hops: readonly Hop[]): Hop | undefined {
+  return hops.find((h) => h.origin);
 }
 
 export function routeFindings(hops: readonly Hop[]): Finding[] {
@@ -147,7 +201,7 @@ export function routeFindings(hops: readonly Hop[]): Finding[] {
     }];
   }
   const findings: Finding[] = [];
-  const origin = hops.find((h) => h.ipScope === "public");
+  const origin = originHop(hops);
   if (origin?.heloMismatch) {
     findings.push({
       id: "route.helo-mismatch", category: "route", severity: "low", title: { en: "Sending server misnames itself", fr: "Le serveur d’envoi se présente sous un faux nom" },

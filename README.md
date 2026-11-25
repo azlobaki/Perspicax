@@ -31,6 +31,8 @@ This is the point of the tool, so it is worth being precise about it.
   remote images replaced by placeholders.
 - **Pivots open only when you click them**, in a new tab, without a referrer.
   That is the one moment an indicator leaves your machine, and you choose it.
+  A link that carries the recipient's address, written out or in base64, is
+  pivoted and reported with `REDACTED` in its place.
 
 ### Check it yourself
 
@@ -48,11 +50,11 @@ In French or English: the browser's language on the first visit, then the FR | E
 
 | Area | Checks |
 |---|---|
-| Headers | Relay chain (hops, delays, HELO vs reverse DNS, private and public IPs); SPF, DKIM, DMARC and Microsoft compauth as recorded by the receiving server, else by Hornetsecurity, Received-SPF or, last, an ARC copy; From / Sender / Reply-To / Return-Path / Message-ID consistency; sender domains that imitate your organisation's or a well-known brand's; display names that show another address, invoke a brand, imitate your organisation, or carry the name of someone you protect; Date anomalies; verdicts of Microsoft 365, Proofpoint, Mimecast, Gmail, SpamAssassin and Hornetsecurity |
+| Headers | Relay chain (hops, delays, HELO vs reverse DNS, private and public IPs), trusted only from the receiving side down: the origin is the hop your server or gateway took from the internet, and older hops are marked as written upstream; SPF, DKIM, DMARC and Microsoft compauth as recorded by the receiving server, else by Hornetsecurity, Received-SPF or, last, an ARC copy; SPF or DKIM that passed for another domain than From's, with no DMARC verdict to tie them; From / Sender / Reply-To / Return-Path / Message-ID consistency; sender domains that imitate your organisation's or a well-known brand's; display names that show another address, invoke a brand, imitate your organisation, or carry the name of someone you protect; Date anomalies; verdicts of Microsoft 365, Proofpoint, Mimecast, Gmail, SpamAssassin and Hornetsecurity |
 | DKIM | Body hash of every signature, recomputed offline: tells you whether the body changed after signing. (Verifying the signature itself needs DNS and is out of scope.) |
-| Links | Every link and remote resource, unwrapped from Safe Links, Proofpoint URL Defense v1–v3, Google, Barracuda, Cisco and Sophos rewrites; link text that shows another domain; hidden links; lookalike, homoglyph and Punycode domains; domains disguised as subdomains; `user@host` tricks; bare IPs; shorteners, Google's redirectors included (`share.google`, `forms.gle`, `page.link`…); abused TLDs; `javascript:` and `data:` links; tracking pixels; forms, password forms above all; words broken by invisible characters; direction overrides |
-| Attachments | MD5, SHA-1, SHA-256; real type from the bytes vs the name; programs, scripts, shortcuts, disk images, web pages; double extensions, right-to-left overrides, padded names; archive contents and encryption; Office macros (OOXML and legacy OLE) and remote templates; HTML smuggling; PDF links and active content; QR codes in images |
-| Content | Requests to pay or to change bank details (RIB, IBAN, payroll, direct deposit…, in French and English), heavier from a webmail address: payroll diversion, supplier and CEO fraud carry no link to catch |
+| Links | Every link and remote resource, unwrapped from Safe Links, Proofpoint URL Defense v1–v3, Google, Barracuda, Cisco and Sophos rewrites; link text that shows another domain; hidden links; lookalike, homoglyph and Punycode domains; a brand's name inside someone else's domain (`paypal-secure.com`, `docusign.workers.dev`); domains disguised as subdomains; free and anonymous hosting (Workers, Pages, R2, tunnels, object storage, IPFS gateways…); OAuth consent links, with the app, the scopes and where the token goes; `user@host` tricks; bare IPs; shorteners, Google's redirectors included (`share.google`, `forms.gle`, `page.link`…); abused TLDs; `javascript:` and `data:` links; links that carry the recipient's address, plainly or in base64; tracking pixels; forms, password forms above all; words broken by invisible characters; direction overrides |
+| Attachments | Attached emails (`.eml`, `.msg`, messages Outlook embeds), each opened and analysed on its own; MD5, SHA-1, SHA-256; real type from the bytes vs the name; programs, scripts, shortcuts, disk images, web pages; double extensions, right-to-left overrides, padded names; archive contents (programs, web pages) and encryption; Office macros (OOXML and legacy OLE) and remote templates; HTML smuggling; the scripts of HTML and SVG attachments, read without running them: an SVG that runs code, redirects decoded at the last moment, passwords posted to a Telegram bot, a webhook or a form relay; the links of SVG attachments; PDF links and active content (an opening action only when it runs script, a program or a link); QR codes in images, graded by what they hold: a link, a bank transfer (EPC/SEPA, Swiss QR-bill) or anything else |
+| Content | Requests to pay or to change bank details (RIB, IBAN, payroll, direct deposit…, in French and English), heavier from a webmail address: payroll diversion, supplier and CEO fraud carry no link to catch; gift cards and crypto, secrecy, an unreachable sender and the "are you available?" opener (urgency alone never counts, newsletters are left out); device-code phishing: a device sign-in page (`microsoft.com/devicelogin`…) and a code to type there, link or not |
 | Indicators | URLs, domains, IPs, addresses and hashes with where each was seen, defanged or raw, with pivots to VirusTotal, urlscan, URLhaus, WHOIS, MXToolbox, AbuseIPDB, Talos and Shodan (editable in Settings) |
 
 Inputs: `.eml`, Outlook `.msg`, or pasted raw headers. When Exchange kept a
@@ -125,6 +127,12 @@ binary). `fixtures/docusign.msg` is generated by `node scripts/make-msg-fixture.
   order; nicknames and initials are not recognised.
 - Lookalike detection compares against well-known brands and the domains you
   enter in Settings; it cannot know every organisation you deal with.
+- The receiving side of the relay chain is recognised from your organisation's
+  domains, well-known mail gateways and the servers that wrote the top of the
+  chain. A sender on the same mail service as you leaves no edge to find; the
+  oldest public hop then stands in, and nothing is marked as written upstream.
+- Scripts in attachments are read, never run: an address built in other ways
+  than a literal `atob`, `unescape` or `String.fromCharCode` is not decoded.
 - No live lookups of any kind: reputation, DNS and WHOIS are one pivot click
   away, by design.
 

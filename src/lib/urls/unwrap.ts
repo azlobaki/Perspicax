@@ -1,5 +1,6 @@
 import type { Text } from "../i18n/text.ts";
 import { decodeBase64 } from "../mime/bytes.ts";
+import { isOAuthAuthorize } from "./oauth.ts";
 
 export type Wrapper = { service: Text; url: string };
 
@@ -86,6 +87,8 @@ function unwrapOnce(href: string): Wrapper | { opaque: string } | null {
   }
   if (/(^|\.)mimecast\.com$/.test(host) && url.pathname.startsWith("/s/")) return { opaque: "Mimecast URL Protect" };
 
+  // An OAuth link's redirect_uri is where the token goes afterwards; the reader lands on the provider's page first.
+  if (isOAuthAuthorize(url)) return null;
   for (const key of REDIRECT_KEYS) {
     const target = param(key);
     if (isAbsoluteHttp(target)) return { service: { en: "Redirect parameter", fr: "Paramètre de redirection" }, url: target };

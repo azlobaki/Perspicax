@@ -5,8 +5,10 @@ import type { Text } from "../i18n/text.ts";
 import { extractHtml, type HtmlForm, type HtmlLink, type HtmlOrigin } from "../html/extract.ts";
 import { sameOrg } from "../net/domain.ts";
 import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts";
+import type { OAuthRequest } from "../urls/oauth.ts";
 import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
+import { findRecipients, redactRecipients } from "./recipient.ts";
 
 /** The extractor's reasons are English phrases or CSS declarations; the declarations read the same in both languages. */
 export const HIDDEN_FR: Record<string, string> = {
@@ -40,12 +42,20 @@ export type AttachmentContent = { name: string; html: Document | null; urls: str
 
 export type LocatedForm = HtmlForm & { attachment: string | null };
 
-export type LinkReport = { links: Link[]; forms: LocatedForm[]; findings: Finding[] };
+export type LinkReport = {
+  links: Link[];
+  forms: LocatedForm[];
+  findings: Finding[];
+  /** Who the message was sent to: reports replace their address in links. */
+  recipients: string[];
+};
 
 export type LinkContext = {
   fromDomain: string | null;
   /** Domains lookalikes are measured against: the organisation's own and well-known brands. */
   references: readonly Reference[];
+  /** Who the message was sent to, to spot links that carry their address. */
+  recipients?: readonly string[];
 };
 
 const CLICKABLE = new Set<LinkOrigin>(["a", "area", "form", "meta-refresh", "text", "file", "qr"]);
@@ -119,16 +129,26 @@ export function analyzeLinks(
       links.push(plain(/^www\./i.test(raw) ? `http://${raw}` : raw, "qr", "attachment", attachment.name));
     }
   }
-  return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context) };
+  return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context), recipients: [...(context.recipients ?? [])] };
 }
 
 type FlagRule = { flag: UrlFlag; severity: Severity; weight: number; title: Text; explanation: Text };
 
 const FLAG_RULES: FlagRule[] = [
+  { flag: "oauth-consent", severity: "high", weight: 15, title: { en: "Link asks to grant an app access to the account", fr: "Le lien demande d’autoriser une application à accéder au compte" },
+    explanation: {
+      en: "The link opens the genuine Microsoft, Google or GitHub sign-in page, which then asks the reader to let an application into their account. Consenting hands the attacker a token that survives a password change and needs no MFA. Check the application (client_id), what it asks for (scope) and where it sends the reader back (redirect_uri).",
+      fr: "Le lien ouvre la vraie page de connexion de Microsoft, Google ou GitHub, qui demande ensuite au lecteur de laisser une application accéder à son compte. Consentir remet à l’attaquant un jeton qui survit à un changement de mot de passe et se passe de l’authentification multifacteur. Vérifiez l’application (client_id), ce qu’elle demande (scope) et où elle renvoie le lecteur (redirect_uri).",
+    } },
   { flag: "lookalike", severity: "high", weight: 18, title: { en: "Lookalike domain", fr: "Domaine sosie" },
     explanation: {
       en: "A link goes to a domain built to be mistaken for a known one.",
       fr: "Un lien mène à un domaine conçu pour être pris pour un domaine connu.",
+    } },
+  { flag: "brand-in-domain", severity: "medium", weight: 10, title: { en: "Brand name in someone else's domain", fr: "Nom de marque dans le domaine d’un tiers" },
+    explanation: {
+      en: "The domain spells a well-known brand as one of its words, but belongs to someone else: anyone can register paypal-secure.com or open docusign.workers.dev.",
+      fr: "Le domaine contient le nom d’une marque connue comme l’un de ses mots, mais appartient à quelqu’un d’autre\u00a0: n’importe qui peut enregistrer paypal-secure.com ou ouvrir docusign.workers.dev.",
     } },
   { flag: "homoglyph", severity: "high", weight: 15, title: { en: "Domain uses look-alike characters", fr: "Domaine aux caractères trompeurs" },
     explanation: {
@@ -165,6 +185,11 @@ const FLAG_RULES: FlagRule[] = [
       en: "A URL shortener hides the destination until the link is followed.",
       fr: "Un raccourcisseur d’URL cache la destination tant que le lien n’est pas suivi.",
     } },
+  { flag: "free-hosting", severity: "low", weight: 5, title: { en: "Link to free web hosting", fr: "Lien vers un hébergement web gratuit" },
+    explanation: {
+      en: "The page sits on a platform where anyone publishes in minutes without a domain of their own, under the platform's reputation. Phishing kits use them for that; legitimate senders rarely link there.",
+      fr: "La page se trouve sur une plateforme où n’importe qui publie en quelques minutes sans domaine à lui, sous la réputation de la plateforme. Les kits d’hameçonnage s’en servent pour cela\u00a0; les expéditeurs légitimes y renvoient rarement.",
+    } },
   { flag: "abused-tld", severity: "low", weight: 3, title: { en: "Top-level domain favoured by abuse", fr: "Domaine de premier niveau prisé des abus" },
     explanation: {
       en: "The domain ends in a TLD that abuse reports single out. A weak signal by itself.",
@@ -193,11 +218,23 @@ const unique = (items: Evidence[]) => {
   }
   return out.slice(0, 10);
 };
-const destination = (link: Link) => link.url.final ?? link.url.raw;
 
 /** `pаypal.com (xn--pypal-4ve.com)`: the ASCII form shows what the eye cannot. */
 function hostLabel(url: InspectedUrl): string {
   return url.displayHost !== url.host ? `${url.displayHost} (${url.host})` : (url.host ?? url.raw);
+}
+
+/** `Microsoft — client_id … — scope Mail.Read Files.ReadWrite.All — redirect_uri https://…` */
+function oauthEvidence(request: OAuthRequest): Evidence {
+  const scopes = request.risky.length > 0 ? request.risky : request.scopes;
+  const parts = (scope: string, admin: string) => [
+    request.provider,
+    `client_id ${request.clientId ?? "—"}`,
+    ...(scopes.length > 0 ? [`${scope} ${scopes.join(" ")}`] : []),
+    ...(request.redirect ? [`redirect_uri ${request.redirect}`] : []),
+    ...(request.admin ? [admin] : []),
+  ].join(" — ");
+  return noted(parts("scope", "admin consent, for the whole organisation"), parts("scope", "consentement administrateur, pour toute l’organisation"));
 }
 
 function linkFindings(
@@ -209,6 +246,9 @@ function linkFindings(
 ): Finding[] {
   const findings: Finding[] = [];
   const clickable = links.filter(isClickable);
+  const recipients = context.recipients ?? [];
+  // Evidence ends up in reports: a recipient's address never appears in it.
+  const destination = (link: Link) => redactRecipients(link.url.final ?? link.url.raw, recipients);
 
   const deceptive = clickable.filter((l) => l.shownHost);
   if (deceptive.length > 0) {
@@ -227,8 +267,39 @@ function linkFindings(
     if (hits.length === 0) continue;
     findings.push({
       id: `url.${rule.flag}`, category: "link", severity: rule.severity, title: rule.title, explanation: rule.explanation,
-      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`) : destination(l)))),
+      evidence: unique(hits.map((l) => {
+        if (rule.flag === "lookalike") return noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`);
+        if (rule.flag === "oauth-consent" && l.url.oauth) return oauthEvidence(l.url.oauth);
+        if (rule.flag === "brand-in-domain") return noted(`${hostLabel(l.url)} uses the name ${l.url.brandIn}`, `${hostLabel(l.url)} emprunte le nom ${l.url.brandIn}`);
+        return destination(l);
+      })),
       weight: rule.weight,
+    });
+  }
+
+  const personalised = clickable.flatMap((l) => {
+    const matches = [l.url.raw, l.url.final].flatMap((u) => (u ? findRecipients(u, recipients) : []));
+    if (matches.length === 0) return [];
+    const base64 = matches.some((m) => m.encoding === "base64");
+    const shown = redactRecipients(l.url.final ?? l.url.raw, recipients);
+    return [{ base64, evidence: base64 ? noted(`${shown} (base64)`, `${shown} (en base64)`) : noted(`${shown} (as written)`, `${shown} (en clair)`) }];
+  });
+  if (personalised.length > 0) {
+    const encoded = personalised.some((p) => p.base64);
+    findings.push({
+      id: "link.recipient-in-url", category: "link", severity: encoded ? "medium" : "low",
+      title: { en: "Link carries the recipient's address", fr: "Le lien contient l’adresse du destinataire" },
+      explanation: {
+        en:
+          "Phishing kits put the target's address in the link to fill in the fake sign-in page and record who clicked; base64 keeps it from a quick look. " +
+          "Mailing services also write it plainly in unsubscribe links, so a plain address weighs little. " +
+          "Indicators, pivots, evidence and the Markdown report show REDACTED in its place, so looking the link up does not hand the address to a third party.",
+        fr:
+          "Les kits d’hameçonnage placent l’adresse de la cible dans le lien pour préremplir la fausse page de connexion et savoir qui a cliqué\u00a0; le base64 la soustrait à un coup d’œil rapide. " +
+          "Les services d’envoi l’écrivent aussi en clair dans les liens de désabonnement, si bien qu’une adresse en clair pèse peu. " +
+          "Les indicateurs, les pivots, les preuves et le rapport Markdown affichent REDACTED à sa place, si bien que rechercher le lien ne transmet pas l’adresse à un tiers.",
+      },
+      evidence: unique(personalised.map((p) => p.evidence)), weight: encoded ? 10 : 4,
     });
   }
 

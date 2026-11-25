@@ -9,7 +9,9 @@ import {
 import { hashes, type Hashes } from "./hash.ts";
 import { inspectOle, inspectOoxml } from "./office.ts";
 import { inspectPdf } from "./pdf.ts";
+import { isMessageAttachment, isOle } from "../messages.ts";
 import { decodeQr, type Pixels } from "./qr.ts";
+import { inspectWebScripts } from "./script.ts";
 import { isSmuggling, smugglingIndicators } from "./smuggling.ts";
 import { listZip } from "./zip.ts";
 
@@ -22,6 +24,7 @@ export type AttachmentFlag =
   | "archive"
   | "encrypted-archive"
   | "archive-hides-program"
+  | "archive-hides-web-page"
   | "double-extension"
   | "rtlo"
   | "long-name"
@@ -30,7 +33,13 @@ export type AttachmentFlag =
   | "remote-template"
   | "html-smuggling"
   | "pdf-active"
-  | "qr-code";
+  | "qr-code"
+  | "qr-payment"
+  | "qr-text"
+  | "message"
+  | "svg-script"
+  | "script-redirect"
+  | "exfiltration";
 
 export type ArchiveEntry = { name: string; size: number; encrypted: boolean; flagged: boolean };
 
@@ -88,11 +97,31 @@ export const PHRASE_FR: Record<string, string> = {
   "saves it without a download prompt": "l’enregistre sans demande de téléchargement",
   "triggers a download": "déclenche un téléchargement",
   "clicks a link by script": "clique sur un lien par script",
+  script: "script",
+  "event handler": "gestionnaire d’événement",
+  "embedded HTML": "HTML intégré",
+  "javascript: link": "lien javascript:",
 };
 
 /** French puts a non-breaking space before a semicolon. */
 const SEMICOLON: Text = { en: "; ", fr: "\u00a0; " };
 const COMMA: Text = { en: ", ", fr: ", " };
+
+export type QrFlag = Extract<AttachmentFlag, "qr-code" | "qr-payment" | "qr-text">;
+
+/**
+ * What a decoded QR code holds: a web address (the quishing case), a bank
+ * transfer (EPC/SEPA or Swiss QR-bill, normal on an invoice), or anything else.
+ */
+export function qrFlag(text: string): { flag: QrFlag; detail: string } {
+  if (/^(https?:\/\/|www\.)/i.test(text)) return { flag: "qr-code", detail: text };
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  const payment = (name: string, iban: string, amount: string) =>
+    ({ flag: "qr-payment" as const, detail: [name, iban, amount].filter(Boolean).join(" — ") });
+  if (lines[0] === "BCD" && lines[3] === "SCT") return payment(lines[5] ?? "", lines[6] ?? "", lines[7] ?? "");
+  if (lines[0] === "SPC") return payment(lines[5] ?? "", lines[3] ?? "", [lines[19], lines[18]].filter(Boolean).join(" "));
+  return { flag: "qr-text", detail: text };
+}
 
 function joinText(phrases: string[], separator: Text): Text {
   return {
@@ -115,7 +144,9 @@ export async function analyzeAttachments(
       if (!flags.includes(name)) flags.push(name);
       if (detail) details[name] = typeof detail === "string" ? { en: detail, fr: detail } : detail;
     };
-    let detected = detectType(data);
+    const message = isMessageAttachment(attachment);
+    // An attached email is text with headers; sniffing its body would call it a web page.
+    let detected = message && !isOle(data) ? kindInfo("eml") : detectType(data);
     let entries: ArchiveEntry[] | null = null;
     const urls: string[] = [];
     const qr: string[] = [];
@@ -130,19 +161,26 @@ export async function analyzeAttachments(
       if (office.remoteTemplate) flag("remote-template", office.remoteTemplate);
       urls.push(...office.externalUrls);
       if (!office.kind) {
+        const programs: string[] = [];
+        const pages: string[] = [];
         entries = listing.map((e) => {
           const cls = extensionClass(extensionOf(e.name));
-          return { name: e.name, size: e.size, encrypted: e.encrypted, flagged: isDangerousClass(cls) || nameTricks(e.name).length > 0 };
+          const flagged = isDangerousClass(cls) || nameTricks(e.name).length > 0;
+          // A web page does not run by itself: it is a fake form waiting to be opened, not a program.
+          if (flagged) (cls === "web-page" ? pages : programs).push(e.name);
+          return { name: e.name, size: e.size, encrypted: e.encrypted, flagged };
         });
         if (entries.some((e) => e.encrypted)) flag("encrypted-archive");
-        const hidden = entries.filter((e) => e.flagged).map((e) => e.name);
-        if (hidden.length > 0) flag("archive-hides-program", hidden.join(", "));
+        if (programs.length > 0) flag("archive-hides-program", programs.join(", "));
+        if (pages.length > 0) flag("archive-hides-web-page", pages.join(", "));
       }
     } else if (detected.kind === "ole") {
       const ole = inspectOle(data);
       if (ole.kind) detected = kindInfo(ole.kind);
       if (ole.macros) flag("macros", ole.macros);
     }
+
+    if (message || detected.kind === "msg") flag("message");
 
     // What the name says and what the bytes say both count: the worse wins.
     for (const cls of [extensionClass(ext), kindClass(detected.kind)]) {
@@ -160,11 +198,26 @@ export async function analyzeAttachments(
       });
     }
 
-    if ((detected.kind === "html" || detected.kind === "svg" || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
+    // Markup the sniffer saw as plain text (no <html> up front) still opens as a page when named like one.
+    const markup: "html" | "svg" | null =
+      detected.kind === "html" || detected.kind === "svg"
+        ? detected.kind
+        : detected.kind === "text" && extensionClass(ext) === "web-page"
+          ? (ext === "svg" ? "svg" : "html")
+          : null;
+    if ((markup || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
       const text = decodeUtf8OrLegacy(data);
-      if (detected.kind === "html") html = text;
       const found = smugglingIndicators(text);
       if (isSmuggling(found)) flag("html-smuggling", joinText([...found.payload, ...found.delivery], SEMICOLON));
+      if (markup) {
+        // An SVG parses as markup too: its links and forms are read like a web page's.
+        html = text;
+        const scripts = inspectWebScripts(text, markup);
+        urls.push(...scripts.urls);
+        if (scripts.svgActive.length > 0) flag("svg-script", joinText(scripts.svgActive, COMMA));
+        if (scripts.redirects) flag("script-redirect", scripts.urls[0]);
+        if (scripts.exfiltration.length > 0) flag("exfiltration", scripts.exfiltration.join(", "));
+      }
     }
     if (detected.kind === "pdf") {
       const pdf = inspectPdf(data);
@@ -177,7 +230,8 @@ export async function analyzeAttachments(
       const text = pixels ? decodeQr(pixels) : null;
       if (text) {
         qr.push(text);
-        flag("qr-code", text);
+        const graded = qrFlag(text);
+        flag(graded.flag, graded.detail);
       }
     }
 
@@ -203,10 +257,25 @@ export async function analyzeAttachments(
 type Rule = { flag: AttachmentFlag; severity: Severity; weight: number; title: Text; explanation: Text };
 
 const RULES: Rule[] = [
+  { flag: "exfiltration", severity: "high", weight: 18, title: { en: "Attachment sends what is typed to a chat bot or form relay", fr: "La pièce jointe envoie la saisie à un robot de messagerie ou un relais de formulaires" },
+    explanation: {
+      en: "The page posts to a Telegram bot, a Discord or Slack webhook or a form-relay service: how phishing pages collect stolen passwords without a server of their own.",
+      fr: "La page envoie vers un robot Telegram, un webhook Discord ou Slack ou un service de relais de formulaires\u00a0: c’est ainsi que les pages d’hameçonnage collectent les mots de passe volés sans serveur à elles.",
+    } },
   { flag: "html-smuggling", severity: "high", weight: 20, title: { en: "HTML smuggling", fr: "Contrebande HTML" },
     explanation: {
       en: "The attachment is a web page that assembles a file inside the browser and saves it, so the file never crosses the mail filter.",
       fr: "La pièce jointe est une page web qui assemble un fichier dans le navigateur et l’enregistre, si bien que le fichier ne traverse jamais la passerelle de messagerie.",
+    } },
+  { flag: "svg-script", severity: "high", weight: 15, title: { en: "Image file that runs code", fr: "Image qui exécute du code" },
+    explanation: {
+      en: "An SVG is an image format, but it can carry script and HTML; opened in a browser it behaves like a web page, which is why it is used to slip phishing pages past filters.",
+      fr: "Le SVG est un format d’image, mais il peut contenir du script et du HTML\u00a0; ouvert dans un navigateur, il se comporte comme une page web, d’où son usage pour faire passer des pages d’hameçonnage sous les filtres.",
+    } },
+  { flag: "script-redirect", severity: "medium", weight: 12, title: { en: "Attachment redirects by script", fr: "La pièce jointe redirige par script" },
+    explanation: {
+      en: "Opened, the page sends the browser to another address by script, often a phishing site decoded at the last moment so that filters never see it.",
+      fr: "À l’ouverture, la page envoie le navigateur vers une autre adresse par script, souvent un site d’hameçonnage décodé au dernier moment pour que les filtres ne le voient jamais.",
     } },
   { flag: "program", severity: "high", weight: 20, title: { en: "Executable attachment", fr: "Pièce jointe exécutable" },
     explanation: {
@@ -243,6 +312,11 @@ const RULES: Rule[] = [
       en: "Opening the document fetches a template from the network, which can carry macros or an exploit (template injection).",
       fr: "L’ouverture du document récupère un modèle sur le réseau, qui peut contenir des macros ou une exploitation de faille (injection de modèle).",
     } },
+  { flag: "archive-hides-web-page", severity: "medium", weight: 12, title: { en: "Archive hides a web page", fr: "L’archive cache une page web" },
+    explanation: {
+      en: "The archive holds a web page, a common vessel for fake login forms and HTML smuggling, packed out of sight of a first look and of some filters.",
+      fr: "L’archive contient une page web, support courant des faux formulaires de connexion et de la contrebande HTML, emballée hors de vue d’un premier coup d’œil et de certains filtres.",
+    } },
   { flag: "rtlo", severity: "high", weight: 15, title: { en: "File name uses a direction override", fr: "Nom de fichier avec inversion du sens d’écriture" },
     explanation: {
       en: "A right-to-left override reverses the end of the name on screen, so “fdp.exe” displays as “exe.pdf”.",
@@ -252,6 +326,16 @@ const RULES: Rule[] = [
     explanation: {
       en: "A QR code moves the link to a phone, away from link scanning and the corporate browser.",
       fr: "Un code QR déplace le lien vers un téléphone, hors de portée de l’analyse des liens et du navigateur d’entreprise.",
+    } },
+  { flag: "qr-text", severity: "low", weight: 5, title: { en: "QR code without a web link", fr: "Code QR sans lien web" },
+    explanation: {
+      en: "The QR code holds no web address but text, a contact, Wi-Fi settings, a phone number or a payment address. Read it: a number to call or a wallet to pay can be the whole scam.",
+      fr: "Le code QR ne contient pas d’adresse web mais du texte, un contact, des réglages Wi-Fi, un numéro de téléphone ou une adresse de paiement. Lisez-le\u00a0: un numéro à appeler ou un portefeuille à payer peut être toute l’arnaque.",
+    } },
+  { flag: "qr-payment", severity: "low", weight: 3, title: { en: "Payment QR code", fr: "Code QR de paiement" },
+    explanation: {
+      en: "The QR code fills in a bank transfer (EPC/SEPA or Swiss QR-bill). That is normal on an invoice; check the beneficiary and the IBAN against the supplier's known details before paying.",
+      fr: "Le code QR prépare un virement (EPC/SEPA ou QR-facture suisse). C’est normal sur une facture\u00a0; vérifiez le bénéficiaire et l’IBAN avec les coordonnées connues du fournisseur avant de payer.",
     } },
   { flag: "double-extension", severity: "high", weight: 12, title: { en: "Double extension", fr: "Double extension" },
     explanation: {
@@ -292,8 +376,8 @@ const RULES: Rule[] = [
 
 // A more specific flag on the same attachment makes these redundant.
 const SUPERSEDED: Partial<Record<AttachmentFlag, AttachmentFlag[]>> = {
-  "web-page": ["html-smuggling"],
-  archive: ["archive-hides-program", "encrypted-archive", "rtlo", "double-extension", "type-mismatch"],
+  "web-page": ["html-smuggling", "svg-script", "script-redirect", "exfiltration"],
+  archive: ["archive-hides-program", "archive-hides-web-page", "encrypted-archive", "rtlo", "double-extension", "type-mismatch"],
 };
 
 export function attachmentFindings(reports: readonly AttachmentReport[]): Finding[] {

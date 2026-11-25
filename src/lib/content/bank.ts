@@ -17,7 +17,7 @@ const WINDOW = 150;
  * Lowercase without accents, one char per char, so offsets still point into
  * the original text when quoting it.
  */
-function fold(text: string): string {
+export function fold(text: string): string {
   let out = "";
   for (const ch of text) {
     const base = ch.normalize("NFD")[0].toLowerCase()[0];
@@ -26,7 +26,7 @@ function fold(text: string): string {
   return out.replace(/[’‘`´]/g, "'");
 }
 
-function quote(text: string, start: number, end: number): string {
+export function quote(text: string, start: number, end: number): string {
   const from = Math.max(0, start - 60);
   const to = Math.min(text.length, end + 100);
   const excerpt = text.slice(from, to).replace(/\s+/g, " ").trim();

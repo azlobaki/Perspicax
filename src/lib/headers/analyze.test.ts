@@ -18,7 +18,6 @@ test("finds the spoof in the spoofed-invoice fixture, most severe first", () => 
     "auth.dmarc-fail",
     "vendor.microsoft-365",
     "sender.reply-to-mismatch",
-    "route.helo-mismatch",
   ]);
   assert.match(report.findings[0].title.en, /your own domain/);
 });
@@ -38,7 +37,6 @@ test("gives the same findings from pasted headers", () => {
     "auth.dmarc-fail",
     "vendor.microsoft-365",
     "sender.reply-to-mismatch",
-    "route.helo-mismatch",
   ]);
   assert.match(report.findings[0].title.en, /DMARC failed for rhone-energie\.fr/);
 });

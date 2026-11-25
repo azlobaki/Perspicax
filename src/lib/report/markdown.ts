@@ -9,6 +9,7 @@ import { isClickable } from "../links/analyze.ts";
 import { decodeEncodedWords } from "../mime/encoded-words.ts";
 import { getHeader } from "../mime/headers.ts";
 import type { Locale } from "../i18n/text.ts";
+import { redactRecipients } from "../links/recipient.ts";
 import { BAND_LABEL } from "../score/score.ts";
 
 export type ReportInput = {
@@ -54,6 +55,8 @@ const L = {
     dkimUnchecked: "not checked (unsupported algorithm)",
     relay: "Relay chain (oldest first)",
     noReceived: "No Received headers.",
+    origin: "origin",
+    claimed: "written upstream, unverifiable",
     time: "Time (UTC)",
     by: "By",
     links: "Links",
@@ -105,6 +108,8 @@ const L = {
     dkimUnchecked: "non vérifiée (algorithme non pris en charge)",
     relay: "Chaîne de relais (du plus ancien au plus récent)",
     noReceived: "Aucun en-tête Received.",
+    origin: "origine",
+    claimed: "écrit en amont, invérifiable",
     time: "Heure (UTC)",
     by: "Par",
     links: "Liens",
@@ -185,7 +190,7 @@ export function reportMarkdown(input: ReportInput): string {
     out.push(`| # | ${l.time} | Δ | ${l.from} | IP | ${l.by} |`, "|---|---|---|---|---|---|");
     for (const hop of headers.hops) {
       out.push(
-        `| ${hop.index} | ${hop.date ? formatTime(hop.date) : "—"} | ${formatDelay(hop.delay)} | ${cell(safe(hop.helo ?? hop.rdns ?? "—"))} | ${cell(safe(hop.ip ?? "—"))} | ${cell(safe(hop.by ?? "—"))} |`,
+        `| ${hop.index} | ${hop.date ? formatTime(hop.date) : "—"} | ${formatDelay(hop.delay)} | ${cell(safe(hop.helo ?? hop.rdns ?? "—"))}${hop.origin ? ` (${l.origin})` : hop.claimed ? ` (${l.claimed})` : ""} | ${cell(safe(hop.ip ?? "—"))} | ${cell(safe(hop.by ?? "—"))} |`,
       );
     }
   }
@@ -202,7 +207,7 @@ export function reportMarkdown(input: ReportInput): string {
       link.hidden ? `${l.hidden} (${link.hidden[locale]})` : null,
       link.attachment ? `${l.in} ${link.attachment}` : null,
     ].filter(Boolean);
-    out.push(`- ${code(safe(link.url.final ?? link.url.raw))} — ${notes.join(", ")}`);
+    out.push(`- ${code(safe(redactRecipients(link.url.final ?? link.url.raw, report.links.recipients)))} — ${notes.join(", ")}`);
   }
   out.push("");
 

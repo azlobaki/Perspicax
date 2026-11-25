@@ -6,7 +6,8 @@ import { strToU8, zipSync } from "fflate";
 import type { Attachment } from "../email.ts";
 import { parseEmail } from "../mime/parse.ts";
 import { decodePng } from "../testing/png.ts";
-import { analyzeAttachments, attachmentFindings } from "./analyze.ts";
+import { scoreFindings } from "../score/score.ts";
+import { analyzeAttachments, attachmentFindings, qrFlag, type AttachmentReport } from "./analyze.ts";
 
 const attachmentsOf = (name: string) =>
   parseEmail(readFileSync(new URL(`../../../fixtures/${name}`, import.meta.url))).attachments;
@@ -14,6 +15,11 @@ const file = (filename: string, data: Uint8Array, contentType = "application/oct
   filename, contentType, contentId: null, inline: false, data,
 });
 const decodeImage = async (data: Uint8Array) => decodePng(data);
+const stub = (name: string): AttachmentReport => ({
+  filename: name, visibleName: name, declaredType: "image/png", inline: false, size: 0,
+  detected: { kind: "png", label: { en: "PNG image", fr: "Image PNG" }, extensions: ["png"] },
+  hashes: { md5: "", sha1: "", sha256: "" }, flags: [], details: {}, entries: null, urls: [], qr: [], html: null,
+});
 
 test("unmasks the spoofed invoice's smuggling page", async () => {
   const [report] = await analyzeAttachments(attachmentsOf("spoofed-invoice.eml"));
@@ -71,4 +77,37 @@ test("leaves ordinary attachments alone", async () => {
   const reports = await analyzeAttachments([file("photo.png", Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), "image/png")]);
   assert.deepEqual(reports[0].flags, []);
   assert.deepEqual(attachmentFindings(reports), []);
+});
+
+test("calls a web page in an archive what it is, without forcing the verdict", async () => {
+  const [page] = await analyzeAttachments([file("facture.zip", zipSync({ "facture.html": strToU8("<form>") }))]);
+  assert.deepEqual(page.flags, ["archive-hides-web-page", "archive"]);
+  assert.deepEqual(page.entries?.map((e) => e.flagged), [true]);
+  const findings = attachmentFindings([page]);
+  assert.deepEqual(findings.map((f) => [f.id, f.severity, f.weight]), [["attachment.archive-hides-web-page", "medium", 12]]);
+  assert.notEqual(scoreFindings(findings).band, "malicious");
+
+  const [both] = await analyzeAttachments([file("lot.zip", zipSync({ "a.html": strToU8("x"), "b.exe": strToU8("MZ") }))]);
+  assert.deepEqual(both.details["archive-hides-program"]?.en, "b.exe");
+  assert.deepEqual(both.details["archive-hides-web-page"]?.en, "a.html");
+  assert.equal(scoreFindings(attachmentFindings([both])).band, "malicious");
+});
+
+test("grades a QR code by what it holds", () => {
+  assert.deepEqual(qrFlag("https://evil.top/x"), { flag: "qr-code", detail: "https://evil.top/x" });
+  assert.deepEqual(qrFlag("www.evil.top/x").flag, "qr-code");
+  const epc = "BCD\n002\n1\nSCT\nBNPAFRPP\nRhone Energie\nFR7630004000031234567890143\nEUR412.50\n\n\nFacture 4471";
+  assert.deepEqual(qrFlag(epc), { flag: "qr-payment", detail: "Rhone Energie — FR7630004000031234567890143 — EUR412.50" });
+  const swiss = "SPC\n0200\n1\nCH4431999123000889012\nS\nRobert Schneider AG\nRue du Lac\n1268\n2501\nBiel\nCH\n\n\n\n\n\n\n\n1949.75\nCHF";
+  assert.deepEqual(qrFlag(swiss), { flag: "qr-payment", detail: "Robert Schneider AG — CH4431999123000889012 — CHF 1949.75" });
+  assert.deepEqual(qrFlag("WIFI:S:Guest;T:WPA;P:secret;;"), { flag: "qr-text", detail: "WIFI:S:Guest;T:WPA;P:secret;;" });
+
+  const findings = attachmentFindings([
+    { ...stub("invoice.png"), flags: ["qr-payment"] },
+    { ...stub("card.png"), flags: ["qr-text"] },
+  ]);
+  assert.deepEqual(findings.map((f) => [f.id, f.severity, f.weight]), [
+    ["attachment.qr-text", "low", 5],
+    ["attachment.qr-payment", "low", 3],
+  ]);
 });

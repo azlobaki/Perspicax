@@ -194,6 +194,7 @@ function Route({ hops }: { hops: Hop[] }) {
 function HopItem({ hop }: { hop: Hop }) {
   const t = useT();
   const flags = hopFlags(hop, t);
+  const trust = hop.origin ? t.headers.origin : hop.claimed ? t.headers.claimed : null;
   const host = hop.helo ?? hop.rdns ?? hop.ip ?? t.headers.unknownHost;
   const transport = [hop.protocol, hop.tls ? "TLS" : null].filter(Boolean).join(" · ");
   return (
@@ -223,6 +224,7 @@ function HopItem({ hop }: { hop: Hop }) {
       </span>
       <span className="col-span-3 text-xs console:sm:col-span-1 dossier:col-span-1 dossier:col-start-3 dossier:row-start-3 dossier:text-sm dossier:italic">
         {flags.length > 0 && <span className={`${FLAG} mr-2`}>{flags.join(" · ")}</span>}
+        {trust && <span className="mr-2 text-muted">{trust}</span>}
         {transport && <span className="text-muted dossier:not-italic">{transport}</span>}
       </span>
     </li>

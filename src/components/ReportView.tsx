@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePick, useT } from "@/i18n/LocaleContext";
 import type { EmailReport } from "@/lib/analyze";
 import type { ParsedEmail } from "@/lib/email";
+import type { CarriedMessage } from "@/lib/messages";
 import { formatUtc } from "@/lib/format";
 import { isClickable } from "@/lib/links/analyze";
 import { decodeEncodedWords } from "@/lib/mime/encoded-words";
@@ -18,17 +19,24 @@ import LinksTab from "./LinksTab";
 import PreviewTab from "./PreviewTab";
 import RawTab from "./RawTab";
 import Tabs from "./Tabs";
-import { DATA, LABEL } from "./ui";
+import { BUTTON, DATA, LABEL, SMALL_BUTTON } from "./ui";
 import { VerdictBlock, VerdictStamp } from "./VerdictBlock";
 
 type TabId = "headers" | "links" | "attachments" | "iocs" | "preview" | "raw";
 
-export default function ReportView({ email, report, file, defang, pivots }: {
+export default function ReportView({ email, report, file, defang, pivots, carried = [], onOpenCarried, onBack, error = null }: {
   email: ParsedEmail;
   report: EmailReport;
   file: { name: string; size: number };
   defang: boolean;
   pivots: PivotService[];
+  /** Emails this one carries, each openable on its own. */
+  carried?: CarriedMessage[];
+  onOpenCarried?: (message: CarriedMessage) => void;
+  /** Present when this email was opened from the one that carried it. */
+  onBack?: () => void;
+  /** Why an attached email could not be opened. */
+  error?: string | null;
 }) {
   const pick = usePick();
   const t = useT();
@@ -39,6 +47,30 @@ export default function ReportView({ email, report, file, defang, pivots }: {
 
   return (
     <main className="flex-1 px-4 pb-12 sm:px-6">
+      {(onBack || error || (carried.length > 0 && onOpenCarried)) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-hairline py-3 text-sm console:py-2 console:text-xs">
+          {onBack && (
+            <button type="button" className={SMALL_BUTTON} onClick={onBack}>
+              {t.report.backToCarrier}
+            </button>
+          )}
+          {carried.length > 0 && onOpenCarried && (
+            <>
+              <p className="font-semibold">{t.report.carried}</p>
+              {carried.map((message, i) => (
+                <button key={i} type="button" className={BUTTON} onClick={() => onOpenCarried(message)}>
+                  {t.report.openCarried(message.name)}
+                </button>
+              ))}
+            </>
+          )}
+          {error && (
+            <p role="alert" className="basis-full font-semibold text-signal-fg">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
       <div className="relative grid gap-x-8 gap-y-6 border-b-[3px] border-rule py-6 lg:grid-cols-12 console:border-b console:border-hairline console:py-3 dossier:border-b-0 dossier:py-8">
         <VerdictStamp score={report.score} />
         <div className="lg:col-span-5 console:lg:col-span-12 dossier:lg:col-span-12">

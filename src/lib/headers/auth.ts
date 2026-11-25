@@ -207,6 +207,57 @@ function evidenceLine(entry: AuthEntry): string {
   return `${entry.method}=${entry.result} ${entryDetails(entry)}`.trim();
 }
 
+/** The domain part of `smtp.mailfrom` or `header.i`, which may be a whole address. */
+function domainOf(value: string | undefined): string | null {
+  if (!value || value === "none") return null;
+  const domain = value.slice(value.lastIndexOf("@") + 1).toLowerCase().replace(/^\.+|\.+$/g, "");
+  return domain.includes(".") ? domain : null;
+}
+
+/**
+ * SPF or DKIM passed, but for another organisation than the From domain's,
+ * and no DMARC verdict ties them: DMARC is what makes the From domain
+ * count, and without a policy anyone can write any From. Alignment is
+ * relaxed (same organisation), as DMARC's default.
+ */
+function unalignedFinding(
+  dmarc: AuthEntry | undefined,
+  spf: AuthEntry | undefined,
+  dkims: AuthEntry[],
+  fromDomain: string | null,
+  orgDomains: readonly string[],
+): Finding | null {
+  const from = domainOf(dmarc?.props["header.from"]) ?? fromDomain;
+  if (!from || (dmarc && ["pass", "fail", "bestguesspass"].includes(dmarc.result))) return null;
+  const passed = [
+    ...(spf?.result === "pass" ? [domainOf(spf.props["smtp.mailfrom"])] : []),
+    ...dkims.filter((d) => d.result === "pass").map((d) => domainOf(d.props["header.d"] ?? d.props["header.i"])),
+  ].filter((d): d is string => d !== null);
+  if (passed.length === 0 || passed.some((d) => sameOrg(d, from))) return null;
+  const own = orgDomains.some((d) => sameOrg(d, from));
+  const shown = [...new Set(passed)].join(", ");
+  return {
+    id: "auth.unaligned", category: "auth", severity: own ? "high" : "low",
+    title: own
+      ? { en: `Authenticated as ${shown}, not as your domain`, fr: `Authentifié comme ${shown}, pas comme votre domaine` }
+      : { en: `Authenticated as ${shown}, not ${from}`, fr: `Authentifié comme ${shown}, pas comme ${from}` },
+    explanation: {
+      en:
+        `SPF or DKIM passed, but for ${shown}, not for ${from}, the domain the reader sees, and no DMARC verdict ties the two: without one, any server can write any From.` +
+        (own
+          ? " The From address claims to be your organisation: publishing a DMARC policy would have made this message fail."
+          : " Mailing services sometimes sign with their own domain, so on its own this weighs little; it matters with a lookalike sender, a payment request or a brand in the display name."),
+      fr:
+        `SPF ou DKIM a réussi, mais pour ${shown}, pas pour ${from}, le domaine que voit le lecteur, et aucun verdict DMARC ne relie les deux\u00a0: sans lui, n’importe quel serveur peut écrire n’importe quelle adresse From.` +
+        (own
+          ? " L’adresse From se fait passer pour votre organisation\u00a0: publier une politique DMARC aurait fait échouer ce message."
+          : " Les services d’envoi signent parfois avec leur propre domaine, si bien que ce signal seul pèse peu\u00a0; il compte avec un expéditeur sosie, une demande de paiement ou une marque dans le nom affiché."),
+    },
+    evidence: [dmarc, spf, ...dkims].filter((e): e is AuthEntry => e !== undefined).map(evidenceLine),
+    weight: own ? 20 : 6,
+  };
+}
+
 export function authFindings(summary: AuthSummary, fromDomain: string | null, orgDomains: readonly string[]): Finding[] {
   if (summary.entries.length === 0) {
     return [{
@@ -271,6 +322,8 @@ export function authFindings(summary: AuthSummary, fromDomain: string | null, or
       evidence: broken.map(evidenceLine), weight: 8,
     });
   }
+  const unaligned = unalignedFinding(dmarc, spf, dkims, fromDomain, orgDomains);
+  if (unaligned) findings.push(unaligned);
   if (compauth?.result === "fail") {
     findings.push({
       id: "auth.compauth-fail", category: "auth", severity: "medium", title: { en: "Microsoft composite authentication failed", fr: "Échec de l’authentification composite Microsoft" },
