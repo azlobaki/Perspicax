@@ -1,4 +1,5 @@
 import { bankChangeFindings } from "./content/bank.ts";
+import { becFindings } from "./content/bec.ts";
 import { analyzeAttachments, attachmentFindings, type AttachmentReport, type ImageDecoder } from "./attachments/analyze.ts";
 import { dkimChecks, dkimFindings, type DkimCheck } from "./dkim/bodyhash.ts";
 import type { ParsedEmail } from "./email.ts";
@@ -8,6 +9,7 @@ import { collectIocs, type Ioc } from "./ioc/collect.ts";
 import { analyzeLinks, type LinkReport } from "./links/analyze.ts";
 import { recipientAddresses } from "./links/recipient.ts";
 import { carriedMessages } from "./messages.ts";
+import { getHeader } from "./mime/headers.ts";
 import { scoreFindings, type Score } from "./score/score.ts";
 import { referencesFor } from "./urls/lookalike.ts";
 
@@ -46,11 +48,15 @@ export async function analyzeEmail(email: ParsedEmail, options: AnalyzeOptions):
     { fromDomain: headers.sender.from?.domain ?? null, references, recipients: recipientAddresses(email.headers) },
     attachments.map((a) => ({ name: a.visibleName, html: a.html ? options.parseHtml(a.html) : null, urls: a.urls, qr: a.qr })),
   );
-  const content = bankChangeFindings({
-    texts: [headers.subject, email.text, doc?.body?.textContent ?? null],
-    fromDomain: headers.sender.from?.domain ?? null,
-    orgDomains: options.orgDomains,
-  });
+  const texts = [headers.subject, email.text, doc?.body?.textContent ?? null];
+  const fromDomain = headers.sender.from?.domain ?? null;
+  const bulk =
+    getHeader(email.headers, "list-unsubscribe") !== null ||
+    /^\s*(bulk|list|junk)\b/i.test(getHeader(email.headers, "precedence") ?? "");
+  const content = [
+    ...bankChangeFindings({ texts, fromDomain, orgDomains: options.orgDomains }),
+    ...becFindings({ texts, fromDomain, orgDomains: options.orgDomains, bulk }),
+  ];
   const carried = carriedMessages(email);
   const notices: Finding[] = carried.length === 0 ? [] : [{
     id: "attachment.message", category: "attachment", severity: "info",
