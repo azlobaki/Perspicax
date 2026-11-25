@@ -4,8 +4,7 @@ import type { ParsedEmail } from "../email.ts";
 import type { Text } from "../i18n/text.ts";
 import type { HeaderReport } from "../headers/analyze.ts";
 import { isClickable, type Link, type LinkOrigin } from "../links/analyze.ts";
-import { parseAddressList } from "../mime/address.ts";
-import { getHeaders } from "../mime/headers.ts";
+import { recipientAddresses, redactRecipients } from "../links/recipient.ts";
 import { normaliseHost } from "../net/domain.ts";
 import { ipScope, isIp } from "../net/ip.ts";
 import { IOC_TYPES, type Ioc, type IocType } from "./types.ts";
@@ -38,9 +37,11 @@ function decodeSafely(text: string): string {
  * Indicators worth searching for elsewhere: the sender's addresses and
  * infrastructure, every destination and remote resource (except mailing
  * services' trackers), attachment hashes, addresses written in the body.
- * Recipients, private addresses and free-mail domains are left out.
+ * Recipients, private addresses and free-mail domains are left out, and
+ * a recipient's address inside a link is replaced, so a pivot never sends it.
  */
 export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; links: Link[]; attachments: AttachmentReport[] }): Ioc[] {
+  const recipients = recipientAddresses(input.email.headers);
   const found = new Map<string, Ioc>();
   const add = (type: IocType, value: string, source: Text) => {
     const key = `${type}:${value}`;
@@ -84,7 +85,7 @@ export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; 
     const source: Text = { en: `${noun.en} in ${place.en}`, fr: `${noun.fr} dans ${place.fr}` };
     const { scheme, final, host } = link.url;
     if ((scheme === "http" || scheme === "https") && final) {
-      add("url", final, source);
+      add("url", redactRecipients(final, recipients), source);
       if (host) addHost(host, source);
     } else if (scheme === "mailto" && final) {
       addEmail(decodeSafely(final.slice("mailto:".length).split("?")[0]), source);
@@ -98,15 +99,9 @@ export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; 
     add("md5", attachment.hashes.md5, source);
   }
 
-  const recipients = new Set(
-    ["to", "cc", "delivered-to"]
-      .flatMap((name) => getHeaders(input.email.headers, name))
-      .flatMap(parseAddressList)
-      .map((a) => a.address.toLowerCase()),
-  );
   const bodyText = `${input.email.text ?? ""}\n${(input.email.html ?? "").replace(/<[^>]+>/g, " ")}`;
   for (const match of bodyText.matchAll(EMAIL_IN_TEXT)) {
-    if (!recipients.has(match[0].toLowerCase())) addEmail(match[0], { en: "body", fr: "corps du message" });
+    if (!recipients.includes(match[0].toLowerCase())) addEmail(match[0], { en: "body", fr: "corps du message" });
   }
 
   return [...found.values()].sort((a, b) => IOC_TYPES.indexOf(a.type) - IOC_TYPES.indexOf(b.type));

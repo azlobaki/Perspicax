@@ -7,6 +7,7 @@ import { sameOrg } from "../net/domain.ts";
 import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts";
 import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
+import { findRecipients, redactRecipients } from "./recipient.ts";
 
 /** The extractor's reasons are English phrases or CSS declarations; the declarations read the same in both languages. */
 export const HIDDEN_FR: Record<string, string> = {
@@ -46,6 +47,8 @@ export type LinkContext = {
   fromDomain: string | null;
   /** Domains lookalikes are measured against: the organisation's own and well-known brands. */
   references: readonly Reference[];
+  /** Who the message was sent to, to spot links that carry their address. */
+  recipients?: readonly string[];
 };
 
 const CLICKABLE = new Set<LinkOrigin>(["a", "area", "form", "meta-refresh", "text", "file", "qr"]);
@@ -229,6 +232,33 @@ function linkFindings(
       id: `url.${rule.flag}`, category: "link", severity: rule.severity, title: rule.title, explanation: rule.explanation,
       evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`) : destination(l)))),
       weight: rule.weight,
+    });
+  }
+
+  const recipients = context.recipients ?? [];
+  const personalised = clickable.flatMap((l) => {
+    const matches = [l.url.raw, l.url.final].flatMap((u) => (u ? findRecipients(u, recipients) : []));
+    if (matches.length === 0) return [];
+    const base64 = matches.some((m) => m.encoding === "base64");
+    const shown = redactRecipients(l.url.final ?? l.url.raw, recipients);
+    return [{ base64, evidence: base64 ? noted(`${shown} (base64)`, `${shown} (en base64)`) : noted(`${shown} (as written)`, `${shown} (en clair)`) }];
+  });
+  if (personalised.length > 0) {
+    const encoded = personalised.some((p) => p.base64);
+    findings.push({
+      id: "link.recipient-in-url", category: "link", severity: encoded ? "medium" : "low",
+      title: { en: "Link carries the recipient's address", fr: "Le lien contient l’adresse du destinataire" },
+      explanation: {
+        en:
+          "Phishing kits put the target's address in the link to fill in the fake sign-in page and record who clicked; base64 keeps it from a quick look. " +
+          "Mailing services also write it plainly in unsubscribe links, so a plain address weighs little. " +
+          "Pivots and reports show REDACTED in its place, so looking the link up does not hand the address to a third party.",
+        fr:
+          "Les kits d’hameçonnage placent l’adresse de la cible dans le lien pour préremplir la fausse page de connexion et savoir qui a cliqué\u00a0; le base64 la soustrait à un coup d’œil rapide. " +
+          "Les services d’envoi l’écrivent aussi en clair dans les liens de désabonnement, si bien qu’une adresse en clair pèse peu. " +
+          "Les pivots et les rapports affichent REDACTED à sa place, si bien que rechercher le lien ne transmet pas l’adresse à un tiers.",
+      },
+      evidence: unique(personalised.map((p) => p.evidence)), weight: encoded ? 10 : 4,
     });
   }
 

@@ -6,6 +6,7 @@ import { sortFindings, type Finding } from "./finding.ts";
 import { analyzeHeaders, type HeaderReport } from "./headers/analyze.ts";
 import { collectIocs, type Ioc } from "./ioc/collect.ts";
 import { analyzeLinks, type LinkReport } from "./links/analyze.ts";
+import { recipientAddresses } from "./links/recipient.ts";
 import { scoreFindings, type Score } from "./score/score.ts";
 import { referencesFor } from "./urls/lookalike.ts";
 
@@ -41,7 +42,7 @@ export async function analyzeEmail(email: ParsedEmail, options: AnalyzeOptions):
   const links = analyzeLinks(
     email,
     doc,
-    { fromDomain: headers.sender.from?.domain ?? null, references },
+    { fromDomain: headers.sender.from?.domain ?? null, references, recipients: recipientAddresses(email.headers) },
     attachments.map((a) => ({ name: a.visibleName, html: a.html ? options.parseHtml(a.html) : null, urls: a.urls, qr: a.qr })),
   );
   const content = bankChangeFindings({

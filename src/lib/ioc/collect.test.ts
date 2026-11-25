@@ -41,3 +41,23 @@ test("leaves recipients and mailing-service trackers out", async () => {
   assert.ok(!values.some((v) => v.includes("sendgrid.net")));
   assert.ok(values.includes("https://lettre.librairie-exemple.fr/selection-octobre"));
 });
+
+test("never hands the recipient's address to a pivot", async () => {
+  const encoded = Buffer.from("claire.dupont@rhone-energie.fr").toString("base64");
+  const raw = [
+    "From: IT <it@helpdesk-rhone.top>",
+    "To: Claire Dupont <claire.dupont@rhone-energie.fr>",
+    "Subject: Password expiry",
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    `<a href="https://evil.top/sso#${encoded}">Keep my password</a>`,
+    `<a href="https://evil.top/login?email=claire.dupont%40rhone-energie.fr">Sign in</a>`,
+    "",
+  ].join("\r\n");
+  const report = await analyzeEmail(parseEmail(new TextEncoder().encode(raw)), { orgDomains: [], parseHtml });
+  assert.deepEqual(report.iocs.filter((i) => i.type === "url").map((i) => i.value), [
+    "https://evil.top/sso#REDACTED",
+    "https://evil.top/login?email=REDACTED",
+  ]);
+  assert.ok(report.findings.some((f) => f.id === "link.recipient-in-url"));
+});
