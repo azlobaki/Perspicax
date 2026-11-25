@@ -27,7 +27,7 @@ test("returns null instead of guessing", () => {
 function hopAt(index: number, isoDate: string): Hop {
   return {
     index, helo: null, rdns: null, ip: null, ipScope: null, by: null, protocol: null, tls: false,
-    date: new Date(isoDate), delay: null, heloMismatch: false, raw: "",
+    date: new Date(isoDate), delay: null, heloMismatch: false, origin: false, claimed: false, raw: "",
   };
 }
 

@@ -22,7 +22,8 @@ test("writes a defanged Markdown ticket report", async () => {
   assert.match(md, /^1\. \*\*Link text shows another destination\*\* — High, \+20$/m);
   assert.match(md, /`"hxxps:\/\/espace-client\[\.\]rhone-energie\[\.\]fr" → hxxps:\/\/rhone-energie\[\.\]fr\[\.\]secure-login\[\.\]click\/auth\?u=j\.martin`/);
   assert.match(md, /^\| spf \| fail \| smtp\.mailfrom=mta-relay\[\.\]click \|$/m);
-  assert.match(md, /^\| 1 \| 07:14:02Z \| — \| mail\[\.\]rhone-energie\[\.\]fr \| 185\[\.\]234\[\.\]72\[\.\]19 \| mx01\[\.\]mta-relay\[\.\]click \|$/m);
+  assert.match(md, /^\| 1 \| 07:14:02Z \| — \| mail\[\.\]rhone-energie\[\.\]fr \(written upstream, unverifiable\) \| 185\[\.\]234\[\.\]72\[\.\]19 \| mx01\[\.\]mta-relay\[\.\]click \|$/m);
+  assert.match(md, /^\| 2 \| 07:14:03Z \| \+1 s \| mx01\[\.\]mta-relay\[\.\]click \(origin\) \|/m);
   assert.match(md, /^\| Facture_RE-4471\.pdf\.html \| HTML document \| 343 B \| `[0-9a-f]{64}` \| web-page, double-extension, html-smuggling \|$/m);
   assert.match(md, /^- `hxxps:\/\/t\[\.\]mta-relay\[\.\]click\/o\/9f3a2c1e\.gif` — image in HTML body$/m);
   assert.doesNotMatch(md, /https:\/\/rhone-energie\.fr\.secure-login/);

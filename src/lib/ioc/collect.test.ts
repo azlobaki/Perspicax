@@ -22,7 +22,7 @@ test("collects the spoofed invoice's indicators with their provenance", async ()
   assert.deepEqual(of("domain"), [
     "rhone-energie.fr",
     "mta-relay.click",
-    "mail.rhone-energie.fr",
+    "mx01.mta-relay.click",
     "rhone-energie.fr.secure-login.click",
     "t.mta-relay.click",
     "espace-client.rhone-energie.fr",

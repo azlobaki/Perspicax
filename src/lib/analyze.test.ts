@@ -26,7 +26,6 @@ test("the spoofed invoice: every kind of finding, malicious indicators", async (
       "url.disguised-domain",
       "attachment.double-extension",
       "sender.reply-to-mismatch",
-      "route.helo-mismatch",
       "html.tracking-pixel",
       "url.abused-tld",
     ],
@@ -90,7 +89,7 @@ test("the DocuSign .msg: suspicious", async () => {
 test("pasted headers are scored on what they show", async () => {
   const source = read("spoofed-invoice.eml").toString("utf8");
   const report = await analyzeEmail(parseHeadersOnly(source.slice(0, source.indexOf("\n\n"))), { orgDomains: [], parseHtml });
-  assert.deepEqual([report.score.score, report.score.band], [45, "likely-phishing"]);
+  assert.deepEqual([report.score.score, report.score.band], [41, "likely-phishing"]);
   assert.deepEqual(report.links.links, []);
   assert.deepEqual(report.attachments, []);
   assert.deepEqual(report.dkim, []);

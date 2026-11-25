@@ -27,7 +27,7 @@ export type HeaderReport = {
 
 export function analyzeHeaders(email: ParsedEmail, options: AnalysisOptions): HeaderReport {
   const headers = email.headers;
-  const hops = relayChain(headers);
+  const hops = relayChain(headers, options.orgDomains);
   const auth = authSummary(headers, hops);
   const sender = senderInfo(headers);
   const vendors = vendorVerdicts(headers);

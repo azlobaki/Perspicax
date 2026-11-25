@@ -54,6 +54,8 @@ const L = {
     dkimUnchecked: "not checked (unsupported algorithm)",
     relay: "Relay chain (oldest first)",
     noReceived: "No Received headers.",
+    origin: "origin",
+    claimed: "written upstream, unverifiable",
     time: "Time (UTC)",
     by: "By",
     links: "Links",
@@ -105,6 +107,8 @@ const L = {
     dkimUnchecked: "non vérifiée (algorithme non pris en charge)",
     relay: "Chaîne de relais (du plus ancien au plus récent)",
     noReceived: "Aucun en-tête Received.",
+    origin: "origine",
+    claimed: "écrit en amont, invérifiable",
     time: "Heure (UTC)",
     by: "Par",
     links: "Liens",
@@ -185,7 +189,7 @@ export function reportMarkdown(input: ReportInput): string {
     out.push(`| # | ${l.time} | Δ | ${l.from} | IP | ${l.by} |`, "|---|---|---|---|---|---|");
     for (const hop of headers.hops) {
       out.push(
-        `| ${hop.index} | ${hop.date ? formatTime(hop.date) : "—"} | ${formatDelay(hop.delay)} | ${cell(safe(hop.helo ?? hop.rdns ?? "—"))} | ${cell(safe(hop.ip ?? "—"))} | ${cell(safe(hop.by ?? "—"))} |`,
+        `| ${hop.index} | ${hop.date ? formatTime(hop.date) : "—"} | ${formatDelay(hop.delay)} | ${cell(safe(hop.helo ?? hop.rdns ?? "—"))}${hop.origin ? ` (${l.origin})` : hop.claimed ? ` (${l.claimed})` : ""} | ${cell(safe(hop.ip ?? "—"))} | ${cell(safe(hop.by ?? "—"))} |`,
       );
     }
   }

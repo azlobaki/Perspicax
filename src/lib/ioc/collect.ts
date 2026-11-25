@@ -3,6 +3,7 @@ import { isFreeMail } from "../data/freemail.ts";
 import type { ParsedEmail } from "../email.ts";
 import type { Text } from "../i18n/text.ts";
 import type { HeaderReport } from "../headers/analyze.ts";
+import { originHop } from "../headers/received.ts";
 import { isClickable, type Link, type LinkOrigin } from "../links/analyze.ts";
 import { recipientAddresses, redactRecipients } from "../links/recipient.ts";
 import { normaliseHost } from "../net/domain.ts";
@@ -68,7 +69,7 @@ export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; 
   for (const row of input.headers.sender.rows) {
     if (row.header !== "Message-ID" && row.value.includes("@")) addEmail(row.value, same(row.header));
   }
-  const origin = input.headers.hops.find((hop) => hop.ipScope === "public");
+  const origin = originHop(input.headers.hops);
   if (origin) {
     for (const value of [origin.ip, origin.helo, origin.rdns]) if (value) addHost(value, { en: "Received (origin)", fr: "Received (origine)" });
   }
