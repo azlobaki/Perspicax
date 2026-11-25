@@ -11,6 +11,7 @@ import { inspectOle, inspectOoxml } from "./office.ts";
 import { inspectPdf } from "./pdf.ts";
 import { isMessageAttachment, isOle } from "../messages.ts";
 import { decodeQr, type Pixels } from "./qr.ts";
+import { inspectWebScripts } from "./script.ts";
 import { isSmuggling, smugglingIndicators } from "./smuggling.ts";
 import { listZip } from "./zip.ts";
 
@@ -35,7 +36,10 @@ export type AttachmentFlag =
   | "qr-code"
   | "qr-payment"
   | "qr-text"
-  | "message";
+  | "message"
+  | "svg-script"
+  | "script-redirect"
+  | "exfiltration";
 
 export type ArchiveEntry = { name: string; size: number; encrypted: boolean; flagged: boolean };
 
@@ -93,6 +97,10 @@ export const PHRASE_FR: Record<string, string> = {
   "saves it without a download prompt": "l’enregistre sans demande de téléchargement",
   "triggers a download": "déclenche un téléchargement",
   "clicks a link by script": "clique sur un lien par script",
+  script: "script",
+  "event handler": "gestionnaire d’événement",
+  "embedded HTML": "HTML intégré",
+  "javascript: link": "lien javascript:",
 };
 
 /** French puts a non-breaking space before a semicolon. */
@@ -190,11 +198,26 @@ export async function analyzeAttachments(
       });
     }
 
-    if ((detected.kind === "html" || detected.kind === "svg" || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
+    // Markup the sniffer saw as plain text (no <html> up front) still opens as a page when named like one.
+    const markup: "html" | "svg" | null =
+      detected.kind === "html" || detected.kind === "svg"
+        ? detected.kind
+        : detected.kind === "text" && extensionClass(ext) === "web-page"
+          ? (ext === "svg" ? "svg" : "html")
+          : null;
+    if ((markup || ["js", "hta"].includes(ext)) && data.length <= MAX_TEXT) {
       const text = decodeUtf8OrLegacy(data);
-      if (detected.kind === "html") html = text;
       const found = smugglingIndicators(text);
       if (isSmuggling(found)) flag("html-smuggling", joinText([...found.payload, ...found.delivery], SEMICOLON));
+      if (markup) {
+        // An SVG parses as markup too: its links and forms are read like a web page's.
+        html = text;
+        const scripts = inspectWebScripts(text, markup);
+        urls.push(...scripts.urls);
+        if (scripts.svgActive.length > 0) flag("svg-script", joinText(scripts.svgActive, COMMA));
+        if (scripts.redirects) flag("script-redirect", scripts.urls[0]);
+        if (scripts.exfiltration.length > 0) flag("exfiltration", scripts.exfiltration.join(", "));
+      }
     }
     if (detected.kind === "pdf") {
       const pdf = inspectPdf(data);
@@ -234,10 +257,25 @@ export async function analyzeAttachments(
 type Rule = { flag: AttachmentFlag; severity: Severity; weight: number; title: Text; explanation: Text };
 
 const RULES: Rule[] = [
+  { flag: "exfiltration", severity: "high", weight: 18, title: { en: "Attachment sends what is typed to a chat bot or form relay", fr: "La pièce jointe envoie la saisie à un robot de messagerie ou un relais de formulaires" },
+    explanation: {
+      en: "The page posts to a Telegram bot, a Discord or Slack webhook or a form-relay service: how phishing pages collect stolen passwords without a server of their own.",
+      fr: "La page envoie vers un robot Telegram, un webhook Discord ou Slack ou un service de relais de formulaires\u00a0: c’est ainsi que les pages d’hameçonnage collectent les mots de passe volés sans serveur à elles.",
+    } },
   { flag: "html-smuggling", severity: "high", weight: 20, title: { en: "HTML smuggling", fr: "Contrebande HTML" },
     explanation: {
       en: "The attachment is a web page that assembles a file inside the browser and saves it, so the file never crosses the mail filter.",
       fr: "La pièce jointe est une page web qui assemble un fichier dans le navigateur et l’enregistre, si bien que le fichier ne traverse jamais la passerelle de messagerie.",
+    } },
+  { flag: "svg-script", severity: "high", weight: 15, title: { en: "Image file that runs code", fr: "Image qui exécute du code" },
+    explanation: {
+      en: "An SVG is an image format, but it can carry script and HTML; opened in a browser it behaves like a web page, which is why it is used to slip phishing pages past filters.",
+      fr: "Le SVG est un format d’image, mais il peut contenir du script et du HTML\u00a0; ouvert dans un navigateur, il se comporte comme une page web, d’où son usage pour faire passer des pages d’hameçonnage sous les filtres.",
+    } },
+  { flag: "script-redirect", severity: "medium", weight: 12, title: { en: "Attachment redirects by script", fr: "La pièce jointe redirige par script" },
+    explanation: {
+      en: "Opened, the page sends the browser to another address by script, often a phishing site decoded at the last moment so that filters never see it.",
+      fr: "À l’ouverture, la page envoie le navigateur vers une autre adresse par script, souvent un site d’hameçonnage décodé au dernier moment pour que les filtres ne le voient jamais.",
     } },
   { flag: "program", severity: "high", weight: 20, title: { en: "Executable attachment", fr: "Pièce jointe exécutable" },
     explanation: {
@@ -338,7 +376,7 @@ const RULES: Rule[] = [
 
 // A more specific flag on the same attachment makes these redundant.
 const SUPERSEDED: Partial<Record<AttachmentFlag, AttachmentFlag[]>> = {
-  "web-page": ["html-smuggling"],
+  "web-page": ["html-smuggling", "svg-script", "script-redirect", "exfiltration"],
   archive: ["archive-hides-program", "archive-hides-web-page", "encrypted-archive", "rtlo", "double-extension", "type-mismatch"],
 };
 

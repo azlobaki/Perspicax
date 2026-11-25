@@ -165,6 +165,9 @@ const en = {
       "qr-payment": "payment QR code",
       "qr-text": "QR code without a link",
       message: "attached email",
+      "svg-script": "image that runs code",
+      "script-redirect": "redirects by script",
+      exfiltration: "sends what is typed away",
     },
   },
   iocs: {
@@ -414,6 +417,9 @@ const fr: Messages = {
       "qr-payment": "code QR de paiement",
       "qr-text": "code QR sans lien",
       message: "e-mail joint",
+      "svg-script": "image qui exécute du code",
+      "script-redirect": "redirige par script",
+      exfiltration: "envoie la saisie ailleurs",
     },
   },
   iocs: {

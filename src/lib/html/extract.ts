@@ -112,7 +112,8 @@ export function extractHtml(doc: Document): HtmlExtract {
     const tag = el.tagName.toLowerCase();
     switch (tag) {
       case "a": {
-        const href = el.getAttribute("href");
+        // SVG links may still use the XLink namespace.
+        const href = el.getAttribute("href") ?? el.getAttribute("xlink:href");
         if (href && href.trim()) {
           const { color, background } = effectiveColors(el);
           const sameColour = color !== null && color === background ? HIDDEN_PHRASES.sameColour : null;
