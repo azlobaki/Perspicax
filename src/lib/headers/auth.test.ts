@@ -124,3 +124,25 @@ test("is silent when everything passes and informative when nothing was recorded
   assert.deepEqual(authFindings(summaryOf(GMAIL), "librairie-exemple.fr", []), []);
   assert.deepEqual(authFindings({ recordedBy: null, source: null, entries: [] }, null, []).map((f) => f.id), ["auth.missing"]);
 });
+
+test("flags authentication that passed for another domain than From's", () => {
+  const supplier = summaryOf("mx; spf=pass smtp.mailfrom=evil-sender.xyz; dkim=pass header.d=evil-sender.xyz; dmarc=none header.from=supplier-co.com");
+  const findings = authFindings(supplier, "supplier-co.com", []);
+  assert.deepEqual(findings.map((f) => [f.id, f.severity, f.weight]), [["auth.unaligned", "low", 6]]);
+  assert.match(findings[0].title.en, /evil-sender\.xyz, not supplier-co\.com/);
+  // On the organisation's own domain, it is spoofing that DMARC would have caught.
+  const own = summaryOf("mx; spf=pass smtp.mailfrom=bounce@evil-sender.xyz; dmarc=none header.from=rhone-energie.fr");
+  assert.deepEqual(authFindings(own, "rhone-energie.fr", ["rhone-energie.fr"]).map((f) => [f.id, f.severity, f.weight]), [["auth.unaligned", "high", 20]]);
+});
+
+test("accepts alignment by organisation, through SPF or DKIM, and leaves DMARC's verdicts to DMARC", () => {
+  const aligned = [
+    "mx; spf=pass smtp.mailfrom=bounce@em.librairie-exemple.fr; dmarc=none header.from=librairie-exemple.fr",
+    "mx; spf=pass smtp.mailfrom=sendgrid.net; dkim=pass header.i=@librairie-exemple.fr; dmarc=none header.from=librairie-exemple.fr",
+    "mx; spf=pass smtp.mailfrom=sendgrid.net; dmarc=bestguesspass header.from=librairie-exemple.fr",
+    "mx; spf=pass smtp.mailfrom=sendgrid.net; dmarc=pass header.from=librairie-exemple.fr",
+  ];
+  for (const value of aligned) assert.deepEqual(authFindings(summaryOf(value), "librairie-exemple.fr", []), [], value);
+  // Nothing passed: the failures speak for themselves.
+  assert.deepEqual(authFindings(summaryOf("mx; spf=softfail smtp.mailfrom=x.com; dmarc=none header.from=y.com"), "y.com", []).map((f) => f.id), ["auth.spf-softfail"]);
+});
