@@ -144,6 +144,7 @@ const en = {
       archive: "archive",
       "encrypted-archive": "password-protected",
       "archive-hides-program": "contains something that runs",
+      "archive-hides-web-page": "contains a web page",
       "double-extension": "double extension",
       rtlo: "direction override in the name",
       "long-name": "padded name",
@@ -153,6 +154,8 @@ const en = {
       "html-smuggling": "HTML smuggling",
       "pdf-active": "active PDF content",
       "qr-code": "QR code",
+      "qr-payment": "payment QR code",
+      "qr-text": "QR code without a link",
     },
   },
   iocs: {
@@ -381,6 +384,7 @@ const fr: Messages = {
       archive: "archive",
       "encrypted-archive": "protégée par mot de passe",
       "archive-hides-program": "contient un élément exécutable",
+      "archive-hides-web-page": "contient une page web",
       "double-extension": "double extension",
       rtlo: "inversion du sens d’écriture dans le nom",
       "long-name": "nom artificiellement allongé",
@@ -390,6 +394,8 @@ const fr: Messages = {
       "html-smuggling": "contrebande HTML",
       "pdf-active": "contenu PDF actif",
       "qr-code": "code QR",
+      "qr-payment": "code QR de paiement",
+      "qr-text": "code QR sans lien",
     },
   },
   iocs: {

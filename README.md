@@ -31,6 +31,8 @@ This is the point of the tool, so it is worth being precise about it.
   remote images replaced by placeholders.
 - **Pivots open only when you click them**, in a new tab, without a referrer.
   That is the one moment an indicator leaves your machine, and you choose it.
+  A link that carries the recipient's address, written out or in base64, is
+  pivoted and reported with `REDACTED` in its place.
 
 ### Check it yourself
 
@@ -50,8 +52,8 @@ In French or English: the browser's language on the first visit, then the FR | E
 |---|---|
 | Headers | Relay chain (hops, delays, HELO vs reverse DNS, private and public IPs); SPF, DKIM, DMARC and Microsoft compauth as recorded by the receiving server, else by Hornetsecurity, Received-SPF or, last, an ARC copy; From / Sender / Reply-To / Return-Path / Message-ID consistency; sender domains that imitate your organisation's or a well-known brand's; display names that show another address, invoke a brand, imitate your organisation, or carry the name of someone you protect; Date anomalies; verdicts of Microsoft 365, Proofpoint, Mimecast, Gmail, SpamAssassin and Hornetsecurity |
 | DKIM | Body hash of every signature, recomputed offline: tells you whether the body changed after signing. (Verifying the signature itself needs DNS and is out of scope.) |
-| Links | Every link and remote resource, unwrapped from Safe Links, Proofpoint URL Defense v1–v3, Google, Barracuda, Cisco and Sophos rewrites; link text that shows another domain; hidden links; lookalike, homoglyph and Punycode domains; domains disguised as subdomains; `user@host` tricks; bare IPs; shorteners, Google's redirectors included (`share.google`, `forms.gle`, `page.link`…); abused TLDs; `javascript:` and `data:` links; tracking pixels; forms, password forms above all; words broken by invisible characters; direction overrides |
-| Attachments | MD5, SHA-1, SHA-256; real type from the bytes vs the name; programs, scripts, shortcuts, disk images, web pages; double extensions, right-to-left overrides, padded names; archive contents and encryption; Office macros (OOXML and legacy OLE) and remote templates; HTML smuggling; PDF links and active content; QR codes in images |
+| Links | Every link and remote resource, unwrapped from Safe Links, Proofpoint URL Defense v1–v3, Google, Barracuda, Cisco and Sophos rewrites; link text that shows another domain; hidden links; lookalike, homoglyph and Punycode domains; domains disguised as subdomains; `user@host` tricks; bare IPs; shorteners, Google's redirectors included (`share.google`, `forms.gle`, `page.link`…); abused TLDs; `javascript:` and `data:` links; links that carry the recipient's address, plainly or in base64; tracking pixels; forms, password forms above all; words broken by invisible characters; direction overrides |
+| Attachments | MD5, SHA-1, SHA-256; real type from the bytes vs the name; programs, scripts, shortcuts, disk images, web pages; double extensions, right-to-left overrides, padded names; archive contents (programs, web pages) and encryption; Office macros (OOXML and legacy OLE) and remote templates; HTML smuggling; PDF links and active content (an opening action only when it runs script, a program or a link); QR codes in images, graded by what they hold: a link, a bank transfer (EPC/SEPA, Swiss QR-bill) or anything else |
 | Content | Requests to pay or to change bank details (RIB, IBAN, payroll, direct deposit…, in French and English), heavier from a webmail address: payroll diversion, supplier and CEO fraud carry no link to catch |
 | Indicators | URLs, domains, IPs, addresses and hashes with where each was seen, defanged or raw, with pivots to VirusTotal, urlscan, URLhaus, WHOIS, MXToolbox, AbuseIPDB, Talos and Shodan (editable in Settings) |
 

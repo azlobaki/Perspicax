@@ -22,6 +22,7 @@ export type AttachmentFlag =
   | "archive"
   | "encrypted-archive"
   | "archive-hides-program"
+  | "archive-hides-web-page"
   | "double-extension"
   | "rtlo"
   | "long-name"
@@ -30,7 +31,9 @@ export type AttachmentFlag =
   | "remote-template"
   | "html-smuggling"
   | "pdf-active"
-  | "qr-code";
+  | "qr-code"
+  | "qr-payment"
+  | "qr-text";
 
 export type ArchiveEntry = { name: string; size: number; encrypted: boolean; flagged: boolean };
 
@@ -94,6 +97,22 @@ export const PHRASE_FR: Record<string, string> = {
 const SEMICOLON: Text = { en: "; ", fr: "\u00a0; " };
 const COMMA: Text = { en: ", ", fr: ", " };
 
+export type QrFlag = Extract<AttachmentFlag, "qr-code" | "qr-payment" | "qr-text">;
+
+/**
+ * What a decoded QR code holds: a web address (the quishing case), a bank
+ * transfer (EPC/SEPA or Swiss QR-bill, normal on an invoice), or anything else.
+ */
+export function qrFlag(text: string): { flag: QrFlag; detail: string } {
+  if (/^(https?:\/\/|www\.)/i.test(text)) return { flag: "qr-code", detail: text };
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  const payment = (name: string, iban: string, amount: string) =>
+    ({ flag: "qr-payment" as const, detail: [name, iban, amount].filter(Boolean).join(" — ") });
+  if (lines[0] === "BCD" && lines[3] === "SCT") return payment(lines[5] ?? "", lines[6] ?? "", lines[7] ?? "");
+  if (lines[0] === "SPC") return payment(lines[5] ?? "", lines[3] ?? "", [lines[19], lines[18]].filter(Boolean).join(" "));
+  return { flag: "qr-text", detail: text };
+}
+
 function joinText(phrases: string[], separator: Text): Text {
   return {
     en: phrases.join(separator.en),
@@ -130,13 +149,18 @@ export async function analyzeAttachments(
       if (office.remoteTemplate) flag("remote-template", office.remoteTemplate);
       urls.push(...office.externalUrls);
       if (!office.kind) {
+        const programs: string[] = [];
+        const pages: string[] = [];
         entries = listing.map((e) => {
           const cls = extensionClass(extensionOf(e.name));
-          return { name: e.name, size: e.size, encrypted: e.encrypted, flagged: isDangerousClass(cls) || nameTricks(e.name).length > 0 };
+          const flagged = isDangerousClass(cls) || nameTricks(e.name).length > 0;
+          // A web page does not run by itself: it is a fake form waiting to be opened, not a program.
+          if (flagged) (cls === "web-page" ? pages : programs).push(e.name);
+          return { name: e.name, size: e.size, encrypted: e.encrypted, flagged };
         });
         if (entries.some((e) => e.encrypted)) flag("encrypted-archive");
-        const hidden = entries.filter((e) => e.flagged).map((e) => e.name);
-        if (hidden.length > 0) flag("archive-hides-program", hidden.join(", "));
+        if (programs.length > 0) flag("archive-hides-program", programs.join(", "));
+        if (pages.length > 0) flag("archive-hides-web-page", pages.join(", "));
       }
     } else if (detected.kind === "ole") {
       const ole = inspectOle(data);
@@ -177,7 +201,8 @@ export async function analyzeAttachments(
       const text = pixels ? decodeQr(pixels) : null;
       if (text) {
         qr.push(text);
-        flag("qr-code", text);
+        const graded = qrFlag(text);
+        flag(graded.flag, graded.detail);
       }
     }
 
@@ -243,6 +268,11 @@ const RULES: Rule[] = [
       en: "Opening the document fetches a template from the network, which can carry macros or an exploit (template injection).",
       fr: "L’ouverture du document récupère un modèle sur le réseau, qui peut contenir des macros ou une exploitation de faille (injection de modèle).",
     } },
+  { flag: "archive-hides-web-page", severity: "medium", weight: 12, title: { en: "Archive hides a web page", fr: "L’archive cache une page web" },
+    explanation: {
+      en: "The archive holds a web page, a common vessel for fake login forms and HTML smuggling, packed out of sight of a first look and of some filters.",
+      fr: "L’archive contient une page web, support courant des faux formulaires de connexion et de la contrebande HTML, emballée hors de vue d’un premier coup d’œil et de certains filtres.",
+    } },
   { flag: "rtlo", severity: "high", weight: 15, title: { en: "File name uses a direction override", fr: "Nom de fichier avec inversion du sens d’écriture" },
     explanation: {
       en: "A right-to-left override reverses the end of the name on screen, so “fdp.exe” displays as “exe.pdf”.",
@@ -252,6 +282,16 @@ const RULES: Rule[] = [
     explanation: {
       en: "A QR code moves the link to a phone, away from link scanning and the corporate browser.",
       fr: "Un code QR déplace le lien vers un téléphone, hors de portée de l’analyse des liens et du navigateur d’entreprise.",
+    } },
+  { flag: "qr-text", severity: "low", weight: 5, title: { en: "QR code without a web link", fr: "Code QR sans lien web" },
+    explanation: {
+      en: "The QR code holds no web address but text, a contact, Wi-Fi settings, a phone number or a payment address. Read it: a number to call or a wallet to pay can be the whole scam.",
+      fr: "Le code QR ne contient pas d’adresse web mais du texte, un contact, des réglages Wi-Fi, un numéro de téléphone ou une adresse de paiement. Lisez-le\u00a0: un numéro à appeler ou un portefeuille à payer peut être toute l’arnaque.",
+    } },
+  { flag: "qr-payment", severity: "low", weight: 3, title: { en: "Payment QR code", fr: "Code QR de paiement" },
+    explanation: {
+      en: "The QR code fills in a bank transfer (EPC/SEPA or Swiss QR-bill). That is normal on an invoice; check the beneficiary and the IBAN against the supplier's known details before paying.",
+      fr: "Le code QR prépare un virement (EPC/SEPA ou QR-facture suisse). C’est normal sur une facture\u00a0; vérifiez le bénéficiaire et l’IBAN avec les coordonnées connues du fournisseur avant de payer.",
     } },
   { flag: "double-extension", severity: "high", weight: 12, title: { en: "Double extension", fr: "Double extension" },
     explanation: {
@@ -293,7 +333,7 @@ const RULES: Rule[] = [
 // A more specific flag on the same attachment makes these redundant.
 const SUPERSEDED: Partial<Record<AttachmentFlag, AttachmentFlag[]>> = {
   "web-page": ["html-smuggling"],
-  archive: ["archive-hides-program", "encrypted-archive", "rtlo", "double-extension", "type-mismatch"],
+  archive: ["archive-hides-program", "archive-hides-web-page", "encrypted-archive", "rtlo", "double-extension", "type-mismatch"],
 };
 
 export function attachmentFindings(reports: readonly AttachmentReport[]): Finding[] {
