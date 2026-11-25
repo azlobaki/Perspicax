@@ -35,6 +35,9 @@ const en = {
     to: "To",
     date: "Date",
     warnings: (n: number) => `${n} parsing ${n === 1 ? "warning" : "warnings"}`,
+    carried: "This email carries another one. The verdict below describes this one only.",
+    openCarried: (name: string) => `Analyse “${name}”`,
+    backToCarrier: "← Back to the email that carried it",
   },
   verdict: {
     aria: (label: string, score: number) => `Verdict: ${label}, risk score ${score} out of 100`,
@@ -158,6 +161,7 @@ const en = {
       "qr-code": "QR code",
       "qr-payment": "payment QR code",
       "qr-text": "QR code without a link",
+      message: "attached email",
     },
   },
   iocs: {
@@ -277,6 +281,9 @@ const fr: Messages = {
     to: "À",
     date: "Date",
     warnings: (n: number) => `${n} avertissement${n === 1 ? "" : "s"} d’analyse`,
+    carried: "Cet e-mail en transporte un autre. Le verdict ci-dessous ne décrit que celui-ci.",
+    openCarried: (name: string) => `Analyser «\u00a0${name}\u00a0»`,
+    backToCarrier: "← Revenir à l’e-mail qui le contenait",
   },
   verdict: {
     aria: (label: string, score: number) => `Verdict\u00a0: ${label}, score de risque ${score} sur 100`,
@@ -400,6 +407,7 @@ const fr: Messages = {
       "qr-code": "code QR",
       "qr-payment": "code QR de paiement",
       "qr-text": "code QR sans lien",
+      message: "e-mail joint",
     },
   },
   iocs: {

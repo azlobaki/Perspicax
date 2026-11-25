@@ -288,6 +288,37 @@ try {
       for (const want of fixture.expect) {
         if (!seen.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file}: missing "${want}"`);
       }
+      // A fixture that carries another email: open it from the banner, check it, come back.
+      if (fixture.carried) {
+        const clickButton = (prefix) =>
+          evaluate(`(() => {
+            const button = [...document.querySelectorAll("button")].find((b) => b.textContent.startsWith(${JSON.stringify(prefix)}));
+            button?.click();
+            return button !== undefined;
+          })()`);
+        const waitForText = (want) =>
+          evaluate(`new Promise((ok) => {
+            const start = Date.now();
+            (function poll() {
+              const text = document.body.innerText.toLowerCase();
+              if (text.includes(${JSON.stringify(want.toLowerCase())}) || Date.now() - start > 5000) ok(text);
+              else setTimeout(poll, 50);
+            })();
+          })`);
+        if (!(await clickButton("Analyse “"))) {
+          failures.push(`${theme} / ${fixture.file}: no button to analyse the attached email`);
+        } else {
+          const inner = await waitForText(fixture.carried.expect[0]);
+          for (const want of fixture.carried.expect) {
+            if (!inner.includes(want.toLowerCase())) failures.push(`${theme} / ${fixture.file} › attached: missing "${want}"`);
+          }
+          await screenshot(`${name}-attached.png`);
+          if (!(await clickButton("← Back"))) failures.push(`${theme} / ${fixture.file}: no way back to the carrier`);
+          else if (!(await waitForText(fixture.expect[0])).includes(fixture.expect[0].toLowerCase())) {
+            failures.push(`${theme} / ${fixture.file}: the carrier did not come back`);
+          }
+        }
+      }
       if (external.length > before) failures.push(`${theme} / ${fixture.file}: ${external.length - before} external request(s)`);
     }
   }

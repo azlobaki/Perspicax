@@ -7,6 +7,7 @@ import { analyzeHeaders, type HeaderReport } from "./headers/analyze.ts";
 import { collectIocs, type Ioc } from "./ioc/collect.ts";
 import { analyzeLinks, type LinkReport } from "./links/analyze.ts";
 import { recipientAddresses } from "./links/recipient.ts";
+import { carriedMessages } from "./messages.ts";
 import { scoreFindings, type Score } from "./score/score.ts";
 import { referencesFor } from "./urls/lookalike.ts";
 
@@ -50,7 +51,18 @@ export async function analyzeEmail(email: ParsedEmail, options: AnalyzeOptions):
     fromDomain: headers.sender.from?.domain ?? null,
     orgDomains: options.orgDomains,
   });
+  const carried = carriedMessages(email);
+  const notices: Finding[] = carried.length === 0 ? [] : [{
+    id: "attachment.message", category: "attachment", severity: "info",
+    title: { en: "Another email is attached", fr: "Un autre e-mail est joint" },
+    explanation: {
+      en: "This email carries another one, forwarded as an attachment or reported through a phishing button. The verdict describes the email that carries it; open the attached one to analyse the suspect itself.",
+      fr: "Cet e-mail en transporte un autre, transféré en pièce jointe ou signalé par un bouton d’hameçonnage. Le verdict décrit l’e-mail qui le transporte\u00a0; ouvrez l’e-mail joint pour analyser le suspect lui-même.",
+    },
+    evidence: carried.map((m) => m.name), weight: 0,
+  }];
   const findings = sortFindings([
+    ...notices,
     ...headers.findings,
     ...dkimFindings(dkim),
     ...links.findings,

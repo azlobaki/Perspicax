@@ -1,10 +1,11 @@
 import * as CFB from "cfb";
 import { TextError } from "../i18n/error.ts";
 import type { Text } from "../i18n/text.ts";
-import type { Attachment, HeaderField, ParsedEmail } from "../email.ts";
+import type { AttachedMessage, Attachment, HeaderField, ParsedEmail } from "../email.ts";
 import { bytesToBinary } from "../mime/bytes.ts";
 import { decodeText, decodeUtf8OrLegacy } from "../mime/charset.ts";
-import { parseHeaderBlock } from "../mime/headers.ts";
+import { decodeEncodedWords } from "../mime/encoded-words.ts";
+import { getHeader, parseHeaderBlock } from "../mime/headers.ts";
 import { decompressRtf, htmlFromRtf, rtfOrigin } from "./rtf.ts";
 
 // MAPI property types, as they appear at the end of stream names.
@@ -27,8 +28,6 @@ const ATTACH_SHORT_NAME = "3704";
 const ATTACH_LONG_NAME = "3707";
 const ATTACH_MIME = "370E";
 const ATTACH_CONTENT_ID = "3712";
-
-const ATTACHMENT_STORAGE = /^(__attach_version1\.0_#[0-9A-Fa-f]{8}\/)/;
 
 const NOT_MSG: Text = { en: "This is not an Outlook .msg file.", fr: "Ce n’est pas un fichier .msg d’Outlook." };
 
@@ -78,14 +77,21 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
   if (![...streams.keys()].some((path) => path.startsWith("__substg1.0_") || path === "__properties_version1.0")) {
     throw new TextError(NOT_MSG);
   }
+  return readMessage(streams, "", 0);
+}
 
+// An attached message can itself carry one; past this depth they are only named.
+const MAX_EMBEDDED_DEPTH = 3;
+
+/** The message whose properties sit under `root`: "" for the file itself, an attachment's storage for an embedded one. */
+function readMessage(streams: ReadonlyMap<string, Uint8Array>, root: string, depth: number): ParsedEmail {
   const text = (prefix: string, id: string): string | null => {
-    const unicode = streams.get(`${prefix}__substg1.0_${id}${UNICODE}`);
+    const unicode = streams.get(`${root}${prefix}__substg1.0_${id}${UNICODE}`);
     if (unicode) return new TextDecoder("utf-16le").decode(unicode).replace(/\0+$/, "");
-    const legacy = streams.get(`${prefix}__substg1.0_${id}${STRING8}`);
+    const legacy = streams.get(`${root}${prefix}__substg1.0_${id}${STRING8}`);
     return legacy ? decodeUtf8OrLegacy(legacy).replace(/\0+$/, "") : null;
   };
-  const binary = (prefix: string, id: string) => streams.get(`${prefix}__substg1.0_${id}${BINARY}`) ?? null;
+  const binary = (prefix: string, id: string) => streams.get(`${root}${prefix}__substg1.0_${id}${BINARY}`) ?? null;
 
   const warnings: Text[] = [];
   const transport = text("", TRANSPORT_HEADERS);
@@ -103,7 +109,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     if (subject) headers.push({ name: "Subject", value: subject });
     warnings.push({
       en: "No transport headers: this message was probably never sent over the internet, so only its sender, recipients and subject are known.",
-      fr: "Aucun en-tête de transport\u00a0: ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
+      fr: "Aucun en-tête de transport : ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
     });
   }
 
@@ -116,16 +122,25 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
   if (!html && compressedRtf) html = htmlFromCompressedRtf(compressedRtf, warnings);
 
   const attachments: Attachment[] = [];
-  const prefixes = [...new Set([...streams.keys()].map((path) => ATTACHMENT_STORAGE.exec(path)?.[1]).filter((p): p is string => !!p))].sort();
+  const embedded: AttachedMessage[] = [];
+  const storage = new RegExp(`^${root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(__attach_version1\\.0_#[0-9A-Fa-f]{8}\\/)`);
+  const prefixes = [...new Set([...streams.keys()].map((path) => storage.exec(path)?.[1]).filter((p): p is string => !!p))].sort();
   for (const prefix of prefixes) {
-    const filename = text(prefix, ATTACH_LONG_NAME) ?? text(prefix, ATTACH_SHORT_NAME) ?? `attachment-${attachments.length + 1}`;
+    const filename = text(prefix, ATTACH_LONG_NAME) ?? text(prefix, ATTACH_SHORT_NAME) ?? `attachment-${attachments.length + embedded.length + 1}`;
     const data = binary(prefix, ATTACH_DATA);
     if (!data) {
-      if ([...streams.keys()].some((path) => path.startsWith(`${prefix}__substg1.0_${ATTACH_DATA}${EMBEDDED}/`))) {
-        warnings.push({
-          en: `The attached message “${filename}” is embedded in Outlook's own format and was not analysed.`,
-          fr: `Le message joint «\u00a0${filename}\u00a0» est intégré dans le format propre à Outlook et n’a pas été analysé.`,
-        });
+      const inner = `${root}${prefix}__substg1.0_${ATTACH_DATA}${EMBEDDED}/`;
+      if ([...streams.keys()].some((path) => path.startsWith(inner))) {
+        if (depth < MAX_EMBEDDED_DEPTH) {
+          const email = readMessage(streams, inner, depth + 1);
+          const subject = getHeader(email.headers, "subject");
+          embedded.push({ name: subject ? `${decodeEncodedWords(subject)}.msg` : filename, email });
+        } else {
+          warnings.push({
+            en: `The attached message “${filename}” is nested too deep and was not read.`,
+            fr: `Le message joint « ${filename} » est imbriqué trop profondément et n’a pas été lu.`,
+          });
+        }
       }
       continue;
     }
@@ -146,6 +161,7 @@ export function parseMsg(bytes: Uint8Array): ParsedEmail {
     text: body,
     html,
     attachments,
+    ...(embedded.length > 0 ? { embedded } : {}),
     raw: [transport ?? headers.map((h) => `${h.name}: ${h.value}`).join("\r\n"), body ?? ""].join("\r\n\r\n"),
     rawBody: null,
     warnings,

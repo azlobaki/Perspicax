@@ -9,6 +9,7 @@ import { isClickable } from "../links/analyze.ts";
 import { decodeEncodedWords } from "../mime/encoded-words.ts";
 import { getHeader } from "../mime/headers.ts";
 import type { Locale } from "../i18n/text.ts";
+import { redactRecipients } from "../links/recipient.ts";
 import { BAND_LABEL } from "../score/score.ts";
 
 export type ReportInput = {
@@ -206,7 +207,7 @@ export function reportMarkdown(input: ReportInput): string {
       link.hidden ? `${l.hidden} (${link.hidden[locale]})` : null,
       link.attachment ? `${l.in} ${link.attachment}` : null,
     ].filter(Boolean);
-    out.push(`- ${code(safe(link.url.final ?? link.url.raw))} — ${notes.join(", ")}`);
+    out.push(`- ${code(safe(redactRecipients(link.url.final ?? link.url.raw, report.links.recipients)))} — ${notes.join(", ")}`);
   }
   out.push("");
 

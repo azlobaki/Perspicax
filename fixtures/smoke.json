@@ -121,5 +121,19 @@
       "Hornetsecurity classified it as spam",
       "m365-account-alert.top"
     ]
+  },
+  {
+    "file": "reported-phish.eml",
+    "expect": [
+      "This email carries another one",
+      "Another email is attached",
+      "Votre colis est en attente.eml"
+    ],
+    "carried": {
+      "expect": [
+        "Display name invokes La Poste",
+        "Link carries the recipient's address"
+      ]
+    }
   }
 ]

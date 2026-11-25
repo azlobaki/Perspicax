@@ -9,6 +9,7 @@ import {
 import { hashes, type Hashes } from "./hash.ts";
 import { inspectOle, inspectOoxml } from "./office.ts";
 import { inspectPdf } from "./pdf.ts";
+import { isMessageAttachment, isOle } from "../messages.ts";
 import { decodeQr, type Pixels } from "./qr.ts";
 import { isSmuggling, smugglingIndicators } from "./smuggling.ts";
 import { listZip } from "./zip.ts";
@@ -33,7 +34,8 @@ export type AttachmentFlag =
   | "pdf-active"
   | "qr-code"
   | "qr-payment"
-  | "qr-text";
+  | "qr-text"
+  | "message";
 
 export type ArchiveEntry = { name: string; size: number; encrypted: boolean; flagged: boolean };
 
@@ -134,7 +136,9 @@ export async function analyzeAttachments(
       if (!flags.includes(name)) flags.push(name);
       if (detail) details[name] = typeof detail === "string" ? { en: detail, fr: detail } : detail;
     };
-    let detected = detectType(data);
+    const message = isMessageAttachment(attachment);
+    // An attached email is text with headers; sniffing its body would call it a web page.
+    let detected = message && !isOle(data) ? kindInfo("eml") : detectType(data);
     let entries: ArchiveEntry[] | null = null;
     const urls: string[] = [];
     const qr: string[] = [];
@@ -167,6 +171,8 @@ export async function analyzeAttachments(
       if (ole.kind) detected = kindInfo(ole.kind);
       if (ole.macros) flag("macros", ole.macros);
     }
+
+    if (message || detected.kind === "msg") flag("message");
 
     // What the name says and what the bytes say both count: the worse wins.
     for (const cls of [extensionClass(ext), kindClass(detected.kind)]) {

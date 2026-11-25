@@ -41,7 +41,13 @@ export type AttachmentContent = { name: string; html: Document | null; urls: str
 
 export type LocatedForm = HtmlForm & { attachment: string | null };
 
-export type LinkReport = { links: Link[]; forms: LocatedForm[]; findings: Finding[] };
+export type LinkReport = {
+  links: Link[];
+  forms: LocatedForm[];
+  findings: Finding[];
+  /** Who the message was sent to: reports replace their address in links. */
+  recipients: string[];
+};
 
 export type LinkContext = {
   fromDomain: string | null;
@@ -122,7 +128,7 @@ export function analyzeLinks(
       links.push(plain(/^www\./i.test(raw) ? `http://${raw}` : raw, "qr", "attachment", attachment.name));
     }
   }
-  return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context) };
+  return { links, forms, findings: linkFindings(links, forms, brokenWords, bidiOverrides, context), recipients: [...(context.recipients ?? [])] };
 }
 
 type FlagRule = { flag: UrlFlag; severity: Severity; weight: number; title: Text; explanation: Text };
@@ -196,7 +202,6 @@ const unique = (items: Evidence[]) => {
   }
   return out.slice(0, 10);
 };
-const destination = (link: Link) => link.url.final ?? link.url.raw;
 
 /** `pаypal.com (xn--pypal-4ve.com)`: the ASCII form shows what the eye cannot. */
 function hostLabel(url: InspectedUrl): string {
@@ -212,6 +217,9 @@ function linkFindings(
 ): Finding[] {
   const findings: Finding[] = [];
   const clickable = links.filter(isClickable);
+  const recipients = context.recipients ?? [];
+  // Evidence ends up in reports: a recipient's address never appears in it.
+  const destination = (link: Link) => redactRecipients(link.url.final ?? link.url.raw, recipients);
 
   const deceptive = clickable.filter((l) => l.shownHost);
   if (deceptive.length > 0) {
@@ -235,7 +243,6 @@ function linkFindings(
     });
   }
 
-  const recipients = context.recipients ?? [];
   const personalised = clickable.flatMap((l) => {
     const matches = [l.url.raw, l.url.final].flatMap((u) => (u ? findRecipients(u, recipients) : []));
     if (matches.length === 0) return [];
@@ -252,11 +259,11 @@ function linkFindings(
         en:
           "Phishing kits put the target's address in the link to fill in the fake sign-in page and record who clicked; base64 keeps it from a quick look. " +
           "Mailing services also write it plainly in unsubscribe links, so a plain address weighs little. " +
-          "Pivots and reports show REDACTED in its place, so looking the link up does not hand the address to a third party.",
+          "Indicators, pivots, evidence and the Markdown report show REDACTED in its place, so looking the link up does not hand the address to a third party.",
         fr:
           "Les kits d’hameçonnage placent l’adresse de la cible dans le lien pour préremplir la fausse page de connexion et savoir qui a cliqué\u00a0; le base64 la soustrait à un coup d’œil rapide. " +
           "Les services d’envoi l’écrivent aussi en clair dans les liens de désabonnement, si bien qu’une adresse en clair pèse peu. " +
-          "Les pivots et les rapports affichent REDACTED à sa place, si bien que rechercher le lien ne transmet pas l’adresse à un tiers.",
+          "Les indicateurs, les pivots, les preuves et le rapport Markdown affichent REDACTED à sa place, si bien que rechercher le lien ne transmet pas l’adresse à un tiers.",
       },
       evidence: unique(personalised.map((p) => p.evidence)), weight: encoded ? 10 : 4,
     });

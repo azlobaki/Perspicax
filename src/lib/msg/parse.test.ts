@@ -98,8 +98,27 @@ test("says what it cannot read", () => {
   }));
   assert.equal(email.html, null);
   assert.match(email.warnings.map((w) => w.en).join(" "), /written as RTF/);
-  assert.match(email.warnings.map((w) => w.en).join(" "), /forwarded\.msg/);
   assert.deepEqual(email.attachments, []);
+  assert.deepEqual(email.embedded?.map((m) => m.name), ["forwarded.msg"]);
+});
+
+test("reads a message Outlook embedded in its own format, attachments included", () => {
+  const inner = "/__attach_version1.0_#00000000/__substg1.0_3701000D/";
+  const email = parseMsg(build({
+    "/__substg1.0_007D001F": utf16("From: Claire <claire.dupont@rhone-energie.fr>\r\nSubject: TR: suspicious\r\n\r\n"),
+    "/__attach_version1.0_#00000000/__substg1.0_3707001F": utf16("Votre colis.msg"),
+    [`${inner}__properties_version1.0`]: new Uint8Array(32),
+    [`${inner}__substg1.0_007D001F`]: utf16("From: La Poste <suivi@colis-laposte.top>\r\nSubject: =?utf-8?Q?Votre_colis_=C3=A0_r=C3=A9cup=C3=A9rer?=\r\n\r\n"),
+    [`${inner}__substg1.0_1000001F`]: utf16("Payez les frais : https://colis-laposte.top/pay"),
+    [`${inner}__attach_version1.0_#00000000/__substg1.0_3707001F`]: utf16("etiquette.html"),
+    [`${inner}__attach_version1.0_#00000000/__substg1.0_37010102`]: new TextEncoder().encode("<form>"),
+  }));
+  assert.deepEqual(email.attachments, []);
+  const [embedded] = email.embedded ?? [];
+  assert.equal(embedded.name, "Votre colis à récupérer.msg");
+  assert.equal(getHeader(embedded.email.headers, "from"), "La Poste <suivi@colis-laposte.top>");
+  assert.equal(embedded.email.text, "Payez les frais : https://colis-laposte.top/pay");
+  assert.deepEqual(embedded.email.attachments.map((a) => a.filename), ["etiquette.html"]);
 });
 
 test("refuses files that are not Outlook messages", () => {
