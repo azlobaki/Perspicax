@@ -5,6 +5,7 @@ import type { Text } from "../i18n/text.ts";
 import { extractHtml, type HtmlForm, type HtmlLink, type HtmlOrigin } from "../html/extract.ts";
 import { sameOrg } from "../net/domain.ts";
 import { inspectUrl, type InspectedUrl, type UrlFlag } from "../urls/inspect.ts";
+import type { OAuthRequest } from "../urls/oauth.ts";
 import type { Reference } from "../urls/lookalike.ts";
 import { findUrlsInText } from "../urls/text.ts";
 import { findRecipients, redactRecipients } from "./recipient.ts";
@@ -134,6 +135,11 @@ export function analyzeLinks(
 type FlagRule = { flag: UrlFlag; severity: Severity; weight: number; title: Text; explanation: Text };
 
 const FLAG_RULES: FlagRule[] = [
+  { flag: "oauth-consent", severity: "high", weight: 15, title: { en: "Link asks to grant an app access to the account", fr: "Le lien demande d’autoriser une application à accéder au compte" },
+    explanation: {
+      en: "The link opens the genuine Microsoft, Google or GitHub sign-in page, which then asks the reader to let an application into their account. Consenting hands the attacker a token that survives a password change and needs no MFA. Check the application (client_id), what it asks for (scope) and where it sends the reader back (redirect_uri).",
+      fr: "Le lien ouvre la vraie page de connexion de Microsoft, Google ou GitHub, qui demande ensuite au lecteur de laisser une application accéder à son compte. Consentir remet à l’attaquant un jeton qui survit à un changement de mot de passe et se passe de l’authentification multifacteur. Vérifiez l’application (client_id), ce qu’elle demande (scope) et où elle renvoie le lecteur (redirect_uri).",
+    } },
   { flag: "lookalike", severity: "high", weight: 18, title: { en: "Lookalike domain", fr: "Domaine sosie" },
     explanation: {
       en: "A link goes to a domain built to be mistaken for a known one.",
@@ -208,6 +214,19 @@ function hostLabel(url: InspectedUrl): string {
   return url.displayHost !== url.host ? `${url.displayHost} (${url.host})` : (url.host ?? url.raw);
 }
 
+/** `Microsoft — client_id … — scope Mail.Read Files.ReadWrite.All — redirect_uri https://…` */
+function oauthEvidence(request: OAuthRequest): Evidence {
+  const scopes = request.risky.length > 0 ? request.risky : request.scopes;
+  const parts = (scope: string, admin: string) => [
+    request.provider,
+    `client_id ${request.clientId ?? "—"}`,
+    ...(scopes.length > 0 ? [`${scope} ${scopes.join(" ")}`] : []),
+    ...(request.redirect ? [`redirect_uri ${request.redirect}`] : []),
+    ...(request.admin ? [admin] : []),
+  ].join(" — ");
+  return noted(parts("scope", "admin consent, for the whole organisation"), parts("scope", "consentement administrateur, pour toute l’organisation"));
+}
+
 function linkFindings(
   links: Link[],
   forms: LocatedForm[],
@@ -238,7 +257,11 @@ function linkFindings(
     if (hits.length === 0) continue;
     findings.push({
       id: `url.${rule.flag}`, category: "link", severity: rule.severity, title: rule.title, explanation: rule.explanation,
-      evidence: unique(hits.map((l) => (rule.flag === "lookalike" ? noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`) : destination(l)))),
+      evidence: unique(hits.map((l) => {
+        if (rule.flag === "lookalike") return noted(`${hostLabel(l.url)} imitates ${l.url.lookalikeOf}`, `${hostLabel(l.url)} imite ${l.url.lookalikeOf}`);
+        if (rule.flag === "oauth-consent" && l.url.oauth) return oauthEvidence(l.url.oauth);
+        return destination(l);
+      })),
       weight: rule.weight,
     });
   }

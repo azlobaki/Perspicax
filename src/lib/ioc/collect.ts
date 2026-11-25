@@ -88,6 +88,15 @@ export function collectIocs(input: { email: ParsedEmail; headers: HeaderReport; 
     if ((scheme === "http" || scheme === "https") && final) {
       add("url", redactRecipients(final, recipients), source);
       if (host) addHost(host, source);
+      // Where a consent link sends the token: the attacker's own server.
+      const redirect = link.url.oauth?.redirect;
+      if (redirect) {
+        try {
+          addHost(new URL(redirect).hostname, { en: `redirect_uri of a ${noun.en}`, fr: `redirect_uri d’un ${noun.fr}` });
+        } catch {
+          // Not an absolute URL: nothing to look up.
+        }
+      }
     } else if (scheme === "mailto" && final) {
       addEmail(decodeSafely(final.slice("mailto:".length).split("?")[0]), source);
     }

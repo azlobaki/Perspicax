@@ -61,3 +61,17 @@ test("never hands the recipient's address to a pivot", async () => {
   ]);
   assert.ok(report.findings.some((f) => f.id === "link.recipient-in-url"));
 });
+
+test("reads a consent link: the finding names the app, the indicators its redirect_uri", async () => {
+  const consent =
+    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=4f2b8c1e&redirect_uri=https%3A%2F%2Fdocs-review.top%2Fcb&scope=offline_access%20Mail.ReadWrite&response_type=code";
+  const raw = ["From: Docs <share@docs-review.top>", "Content-Type: text/html", "", `<a href="${consent.replace(/&/g, "&amp;")}">Open the shared file</a>`, ""].join("\r\n");
+  const report = await analyzeEmail(parseEmail(new TextEncoder().encode(raw)), { orgDomains: [], parseHtml });
+  const finding = report.findings.find((f) => f.id === "url.oauth-consent");
+  assert.deepEqual(finding?.evidence.map((e) => (typeof e === "string" ? e : e.en)), [
+    "Microsoft — client_id 4f2b8c1e — scope Mail.ReadWrite — redirect_uri https://docs-review.top/cb",
+  ]);
+  const domains = report.iocs.filter((i) => i.type === "domain");
+  assert.deepEqual(domains.find((i) => i.value === "docs-review.top")?.sources.map((s) => s.en), ["From", "redirect_uri of a link"]);
+  assert.ok(domains.some((i) => i.value === "login.microsoftonline.com"));
+});

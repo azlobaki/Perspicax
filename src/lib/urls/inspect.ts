@@ -3,6 +3,7 @@ import { isShortener } from "../data/shorteners.ts";
 import { orgDomain } from "../net/domain.ts";
 import { isIPv4 } from "../net/ip.ts";
 import { isHomoglyph, lookalikeOf, type Reference } from "./lookalike.ts";
+import { oauthRequest, type OAuthRequest } from "./oauth.ts";
 import { hostToUnicode } from "./punycode.ts";
 import { unwrapUrl, type Wrapper } from "./unwrap.ts";
 
@@ -18,6 +19,7 @@ export type UrlFlag =
   | "abused-tld"
   | "punycode"
   | "opaque-wrapper"
+  | "oauth-consent"
   | "unparseable";
 
 export type InspectedUrl = {
@@ -35,6 +37,8 @@ export type InspectedUrl = {
   /** Host of `final` as a reader would see it (Unicode). */
   displayHost: string | null;
   lookalikeOf: string | null;
+  /** What an OAuth authorisation link asks for. */
+  oauth: OAuthRequest | null;
   flags: UrlFlag[];
 };
 
@@ -47,7 +51,7 @@ export function inspectUrl(raw: string, options: { base?: string | null; referen
   const cleaned = raw.trim().replace(/[\t\n\r]/g, "");
   const result: InspectedUrl = {
     raw, href: null, final: null, wrappers: [], opaque: null, scheme: null,
-    host: null, displayHost: null, lookalikeOf: null, flags: [],
+    host: null, displayHost: null, lookalikeOf: null, oauth: null, flags: [],
   };
 
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(cleaned)?.[1].toLowerCase() ?? null;
@@ -92,6 +96,8 @@ export function inspectUrl(raw: string, options: { base?: string | null; referen
 
   const host = final.hostname.toLowerCase();
   result.host = host;
+  result.oauth = oauthRequest(final);
+  if (result.oauth) result.flags.push("oauth-consent");
   result.displayHost = hostToUnicode(host);
   if (isIPv4(host) || host.startsWith("[")) {
     result.flags.push("ip-host");

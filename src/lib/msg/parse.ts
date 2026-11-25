@@ -109,7 +109,7 @@ function readMessage(streams: ReadonlyMap<string, Uint8Array>, root: string, dep
     if (subject) headers.push({ name: "Subject", value: subject });
     warnings.push({
       en: "No transport headers: this message was probably never sent over the internet, so only its sender, recipients and subject are known.",
-      fr: "Aucun en-tête de transport : ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
+      fr: "Aucun en-tête de transport\u00a0: ce message n’a probablement jamais transité par Internet, on ne connaît donc que son expéditeur, ses destinataires et son objet.",
     });
   }
 
@@ -138,7 +138,7 @@ function readMessage(streams: ReadonlyMap<string, Uint8Array>, root: string, dep
         } else {
           warnings.push({
             en: `The attached message “${filename}” is nested too deep and was not read.`,
-            fr: `Le message joint « ${filename} » est imbriqué trop profondément et n’a pas été lu.`,
+            fr: `Le message joint «\u00a0${filename}\u00a0» est imbriqué trop profondément et n’a pas été lu.`,
           });
         }
       }
